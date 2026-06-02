@@ -1,0 +1,1051 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft Connect & Chat System (Supabase SDK)</title>
+    <!-- Tailwind CSS for modern responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for beautiful icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Prompt -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Supabase JS SDK (v2) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+        }
+        /* Custom scrollbar for chat */
+        .chat-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-scrollbar::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.3);
+        }
+        .chat-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.5);
+            border-radius: 3px;
+        }
+        .chat-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.8);
+        }
+        .image-render-pixelated {
+            image-rendering: pixelated;
+        }
+        /* บังคับให้ปุ่มทุกตัวแสดง cursor pointer เสมอ */
+        button, [role="button"], .avatar-option {
+            cursor: pointer !important;
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-100 flex flex-col justify-between overflow-x-hidden">
+
+    <!-- Header Navigation Bar -->
+    <header class="w-full bg-slate-900/80 backdrop-blur-md border-b border-slate-800 py-4 px-6 flex justify-between items-center z-30 relative">
+        <div class="flex items-center gap-3">
+            <div class="bg-indigo-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/30 flex items-center justify-center">
+                <i class="fa-solid fa-cubes text-xl text-white"></i>
+            </div>
+            <div>
+                <span class="font-bold text-lg tracking-wide bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">MNC Connect</span>
+                <span class="text-xs block text-slate-400">ระบบแชทและเชื่อมต่อโปรไฟล์ (Supabase Live SDK)</span>
+            </div>
+        </div>
+        <div id="header-user" class="hidden flex items-center gap-3 bg-slate-800/80 px-4 py-1.5 rounded-full border border-slate-700">
+            <img id="nav-avatar" src="https://api.dicebear.com/7.x/pixel-art/svg?seed=default" alt="Avatar" class="w-7 h-7 rounded-full border border-indigo-500">
+            <span id="nav-username" class="text-sm font-medium text-slate-300">User</span>
+            <button onclick="logout()" class="text-slate-400 hover:text-rose-400 transition ml-2 cursor-pointer" title="ออกจากระบบ">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow flex items-center justify-center p-4 md:p-8 z-10 relative">
+        
+        <!-- ================= AUTH CHOICE VIEW ================= -->
+        <div id="view-auth-choice" class="w-full max-w-md bg-slate-900/60 backdrop-blur-lg border border-slate-800 p-8 rounded-3xl shadow-2xl text-center transition-all duration-300 block relative">
+            <div class="mb-8">
+                <div class="w-20 h-20 mx-auto bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-3xl flex items-center justify-center shadow-xl shadow-indigo-500/20 mb-6">
+                    <i class="fa-solid fa-user-astronaut text-4xl text-white"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-white mb-2">ยินดีต้อนรับ</h1>
+                <p class="text-slate-400">ระบบเชื่อมต่อบัญชี Minecraft และแชทคอมมูนิตี้ที่ทำงานผ่าน Supabase Authentication</p>
+            </div>
+            
+            <div class="space-y-4 relative">
+                <button type="button" onclick="switchView('register')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-4 px-6 rounded-2xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer relative z-20">
+                    <i class="fa-solid fa-user-plus"></i> สมัครใช้งาน (Sign Up)
+                </button>
+                <button type="button" onclick="switchView('login')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-4 px-6 rounded-2xl transition border border-slate-700 flex items-center justify-center gap-2 cursor-pointer relative z-20">
+                    <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ (Log In)
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= REGISTER FLOW (4 STEPS) ================= -->
+        <div id="view-register" class="hidden w-full max-w-lg bg-slate-900/60 backdrop-blur-lg border border-slate-800 p-6 md:p-8 rounded-3xl shadow-2xl transition-all duration-300 relative">
+            <!-- Progress Tracker -->
+            <div class="mb-8">
+                <div class="flex items-center justify-between relative">
+                    <div class="absolute left-0 right-0 top-1/2 h-0.5 bg-slate-800 -z-10"></div>
+                    <div id="progress-line" class="absolute left-0 top-1/2 h-0.5 bg-indigo-500 transition-all duration-300 -z-10" style="width: 0%"></div>
+                    
+                    <div class="step-indicator flex flex-col items-center">
+                        <div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm border-4 border-slate-900 transition-all duration-300" id="step-dot-1">1</div>
+                        <span class="text-xs mt-1 text-indigo-400 font-medium">บัญชี</span>
+                    </div>
+                    <div class="step-indicator flex flex-col items-center">
+                        <div class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm border-4 border-slate-900 transition-all duration-300" id="step-dot-2">2</div>
+                        <span class="text-xs mt-1 text-slate-500">ข้อมูล</span>
+                    </div>
+                    <div class="step-indicator flex flex-col items-center">
+                        <div class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm border-4 border-slate-900 transition-all duration-300" id="step-dot-3">3</div>
+                        <span class="text-xs mt-1 text-slate-500">Minecraft</span>
+                    </div>
+                    <div class="step-indicator flex flex-col items-center">
+                        <div class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm border-4 border-slate-900 transition-all duration-300" id="step-dot-4">4</div>
+                        <span class="text-xs mt-1 text-slate-500">โปรไฟล์</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 1: ACCOUNT DETAILS -->
+            <div id="reg-step-1" class="space-y-6 block">
+                <div>
+                    <h2 class="text-2xl font-bold text-white mb-1">สร้างบัญชีผู้ใช้</h2>
+                    <p class="text-sm text-slate-400">กรอกข้อมูลบัญชีเพื่อใช้ลงทะเบียนในระบบ Supabase</p>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Username - ชื่อผู้ใช้</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                            <input type="text" id="reg-username" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition" placeholder="เช่น Hello12345">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Password - รหัสผ่าน (ขั้นต่ำ 6 ตัวอักษร)</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                            <input type="password" id="reg-password" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition" placeholder="รหัสผ่านของคุณ">
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-4 bg-slate-950/30 rounded-2xl border border-slate-800">
+                        <input type="checkbox" id="reg-age-check" class="mt-1 w-5 h-5 rounded border-slate-800 bg-slate-950 text-indigo-600 focus:ring-0 cursor-pointer">
+                        <label for="reg-age-check" class="text-sm text-slate-300 leading-snug cursor-pointer select-none">
+                            I am 13 years of age or older.<br>
+                            <span class="text-xs text-slate-500 font-normal">ฉันมีอายุ 13 ปีขึ้นไป</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="switchView('auth-choice')" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3.5 rounded-2xl transition cursor-pointer">ย้อนกลับ</button>
+                    <button type="button" onclick="submitRegStep1()" class="w-2/3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3.5 rounded-2xl transition shadow-lg shadow-indigo-600/20 cursor-pointer">Next / ถัดไป</button>
+                </div>
+            </div>
+
+            <!-- STEP 2: PROFILE NAME -->
+            <div id="reg-step-2" class="hidden space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-white mb-1">ข้อมูลส่วนตัว</h2>
+                    <p class="text-sm text-slate-400">ระบุชื่อเล่นหรือชื่อที่คุณต้องการให้แสดงในระบบแชท</p>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Name - ชื่อเล่นของคุณ</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-signature absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                            <input type="text" id="reg-nickname" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition" placeholder="เช่น Fold475">
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="prevRegStep(1)" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3.5 rounded-2xl transition cursor-pointer">ย้อนกลับ</button>
+                    <button type="button" onclick="submitRegStep2()" class="w-2/3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3.5 rounded-2xl transition shadow-lg shadow-indigo-600/20 cursor-pointer">Next / ถัดไป</button>
+                </div>
+            </div>
+
+            <!-- STEP 3: MINECRAFT LINK -->
+            <div id="reg-step-3" class="hidden space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-white mb-1">Minecraft Integration</h2>
+                    <p class="text-sm text-slate-400">เชื่อมต่อสกินตัวละครของคุณเข้ามายังระบบ</p>
+                </div>
+                
+                <div class="bg-indigo-950/30 border border-indigo-900/50 p-4 rounded-2xl text-xs text-indigo-300 leading-relaxed flex gap-3">
+                    <i class="fa-solid fa-circle-info text-base mt-0.5 text-indigo-400"></i>
+                    <div>
+                        ระบบเชื่อมต่อนี้จะดึงรูปภาพของใบหน้าและตัวละครจากบัญชี <strong class="text-white font-semibold">Minecraft Java Edition</strong> ตามชื่อที่คุณระบุ เพื่อนำมาแปลงเป็นสกินโปรไฟล์ภายในเซิร์ฟเวอร์ของเรา
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                    <div class="md:col-span-2 space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Minecraft PlayerName - ชื่อผู้เล่น</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-gamepad absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                <input type="text" id="reg-mc-name" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition" placeholder="เช่น Player3880">
+                            </div>
+                        </div>
+                        <button type="button" onclick="testFetchMinecraftSkin()" class="w-full bg-slate-800 hover:bg-slate-700 text-xs py-2 px-4 rounded-xl border border-slate-700 text-indigo-300 font-medium transition flex items-center justify-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-rotate"></i> ดึงภาพสกินตัวละคร
+                        </button>
+                    </div>
+                    
+                    <div class="flex flex-col items-center justify-center p-4 bg-slate-950/50 border border-slate-800 rounded-2xl aspect-square">
+                        <span class="text-xs text-slate-500 mb-2">สกินจำลอง</span>
+                        <div class="relative w-16 h-16 bg-slate-900 border-2 border-indigo-500 rounded-xl overflow-hidden flex items-center justify-center shadow-lg shadow-indigo-500/10">
+                            <!-- Minecraft avatar fallback API -->
+                            <img id="mc-avatar-preview" src="https://minotar.net/helm/Steve/64.png" alt="Minecraft Skin" class="w-12 h-12 image-render-pixelated">
+                            <div id="mc-avatar-loading" class="hidden absolute inset-0 bg-slate-950/80 flex items-center justify-center">
+                                <i class="fa-solid fa-spinner animate-spin text-indigo-500"></i>
+                            </div>
+                        </div>
+                        <span id="mc-preview-status" class="text-xs text-slate-500 mt-2 font-medium">สกินเริ่มต้น</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="prevRegStep(2)" class="w-1/4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3.5 rounded-2xl transition text-sm cursor-pointer">ย้อนกลับ</button>
+                    <button type="button" onclick="skipRegStep3()" class="w-1/4 bg-slate-800/40 hover:bg-slate-800 text-slate-400 font-medium py-3.5 rounded-2xl transition border border-slate-800 text-sm cursor-pointer">Skip / ข้าม</button>
+                    <button type="button" onclick="submitRegStep3()" class="w-2/4 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3.5 rounded-2xl transition shadow-lg shadow-indigo-600/20 text-sm cursor-pointer">Next / ถัดไป</button>
+                </div>
+            </div>
+
+            <!-- STEP 4: CHOOSE PROFILE PICTURE -->
+            <div id="reg-step-4" class="hidden space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-white mb-1">เลือกรูปโปรไฟล์ของคุณ</h2>
+                    <p class="text-sm text-slate-400">ปรับแต่งรูปโปรไฟล์เพื่อเปิดตัวในห้องแชท</p>
+                </div>
+
+                <div class="space-y-4">
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">โปรไฟล์ที่แนะนำ</label>
+                    <div class="grid grid-cols-4 gap-3">
+                        <!-- Option 1: Default Avatar 1 -->
+                        <div onclick="selectAvatar('avatar-1', 'https://api.dicebear.com/7.x/pixel-art/svg?seed=John')" id="avatar-1" class="avatar-option cursor-pointer p-1.5 rounded-2xl border-2 border-slate-800 bg-slate-950/50 hover:border-indigo-500 transition flex items-center justify-center aspect-square">
+                            <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=John" alt="Avatar 1" class="w-12 h-12 rounded-xl">
+                        </div>
+                        <!-- Option 2: Default Avatar 2 -->
+                        <div onclick="selectAvatar('avatar-2', 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Sara')" id="avatar-2" class="avatar-option cursor-pointer p-1.5 rounded-2xl border-2 border-slate-800 bg-slate-950/50 hover:border-indigo-500 transition flex items-center justify-center aspect-square">
+                            <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=Sara" alt="Avatar 2" class="w-12 h-12 rounded-xl">
+                        </div>
+                        <!-- Option 3: Default Avatar 3 -->
+                        <div onclick="selectAvatar('avatar-3', 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Steve')" id="avatar-3" class="avatar-option cursor-pointer p-1.5 rounded-2xl border-2 border-slate-800 bg-slate-950/50 hover:border-indigo-500 transition flex items-center justify-center aspect-square">
+                            <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=Steve" alt="Avatar 3" class="w-12 h-12 rounded-xl">
+                        </div>
+                        <!-- Option 4: Custom Minecraft Avatar (Unlocked when step 3 integrates) -->
+                        <div onclick="selectAvatar('avatar-mc', null)" id="avatar-mc" class="avatar-option opacity-40 cursor-not-allowed p-1.5 rounded-2xl border-2 border-dashed border-slate-800 bg-slate-950/50 hover:border-indigo-500 transition flex flex-col items-center justify-center aspect-square relative">
+                            <img id="avatar-mc-img" src="https://minotar.net/helm/Steve/64.png" alt="Minecraft Custom" class="w-12 h-12 rounded-xl hidden">
+                            <div id="avatar-mc-lock" class="flex flex-col items-center">
+                                <i class="fa-solid fa-lock text-sm text-slate-500"></i>
+                                <span class="text-[9px] text-slate-500 mt-1">Minecraft</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-slate-950/40 border border-slate-800 rounded-2xl text-center space-y-2">
+                        <p class="text-xs text-slate-400">รูปภาพโปรไฟล์ที่คุณเลือกจะบันทึกลงในฐานข้อมูลและแชร์ให้เพื่อนๆ เห็น</p>
+                        <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-850 rounded-full border border-slate-700">
+                            <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                            <span class="text-[10px] text-slate-300">ความปลอดภัยระดับ Supabase API Auth</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="prevRegStep(3)" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3.5 rounded-2xl transition cursor-pointer">ย้อนกลับ</button>
+                    <button type="button" onclick="finishRegistration()" class="w-2/3 bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3.5 rounded-2xl transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer">
+                        <span id="reg-loading" class="hidden"><i class="fa-solid fa-spinner animate-spin"></i> กำลังสมัคร...</span>
+                        <span id="reg-btn-text"><i class="fa-solid fa-check"></i> สร้างบัญชีเสร็จสมบูรณ์</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= LOGIN VIEW ================= -->
+        <div id="view-login" class="hidden w-full max-w-md bg-slate-900/60 backdrop-blur-lg border border-slate-800 p-8 rounded-3xl shadow-2xl transition-all duration-300 relative">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-white mb-2">เข้าสู่ระบบ</h2>
+                <p class="text-sm text-slate-400">ระบุชื่อบัญชีและรหัสผ่านเพื่อเข้าทำงานระบบแชท</p>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Username - ชื่อผู้ใช้</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                        <input type="text" id="login-username" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition" placeholder="เช่น Hello12345">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Password - รหัสผ่าน</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                        <input type="password" id="login-password" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition" placeholder="รหัสผ่านของคุณ">
+                    </div>
+                </div>
+                
+                <button type="button" onclick="submitLogin()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3.5 rounded-2xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 mt-4 cursor-pointer">
+                    <span id="login-loading" class="hidden"><i class="fa-solid fa-spinner animate-spin"></i> กำลังตรวจสอบ...</span>
+                    <span id="login-btn-text"><i class="fa-solid fa-right-to-bracket"></i> ล็อกอินเข้าระบบ</span>
+                </button>
+
+                <div class="text-center pt-4">
+                    <span class="text-sm text-slate-400">ยังไม่มีบัญชีใช่หรือไม่?</span>
+                    <button type="button" onclick="switchView('register')" class="text-sm text-indigo-400 hover:text-indigo-300 font-medium ml-1.5 underline underline-offset-4 cursor-pointer">สมัครสมาชิกใหม่</button>
+                </div>
+                
+                <div class="text-center">
+                    <button type="button" onclick="switchView('auth-choice')" class="text-xs text-slate-500 hover:text-slate-400 transition cursor-pointer">หน้าแรกสุด</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MAIN CHAT SYSTEM ================= -->
+        <div id="view-chat" class="hidden w-full max-w-5xl h-[80vh] flex flex-col md:flex-row bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 relative">
+            
+            <!-- Left Panel / Sidebar -->
+            <div class="w-full md:w-80 bg-slate-950/40 border-b md:border-b-0 md:border-r border-slate-800 p-4 flex md:flex-col justify-between">
+                <div>
+                    <!-- Active Room Title -->
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                            <i class="fa-solid fa-comments text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-white leading-tight">กลุ่มแชทรวมเซิร์ฟเวอร์</h3>
+                            <span class="text-[11px] text-emerald-400 flex items-center gap-1 mt-0.5">
+                                <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+                                ซิงค์ตรงกับ Supabase Cloud
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- App User Profile Card -->
+                    <div class="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl space-y-3">
+                        <div class="flex items-center gap-3">
+                            <div class="relative">
+                                <img id="chat-profile-avatar" src="https://api.dicebear.com/7.x/pixel-art/svg?seed=John" alt="User Profile" class="w-12 h-12 rounded-xl border border-indigo-500">
+                                <div class="absolute -bottom-1 -right-1 w-4.5 h-4.5 bg-emerald-500 border-2 border-slate-900 rounded-full"></div>
+                            </div>
+                            <div>
+                                <h4 id="chat-profile-name" class="font-bold text-white">Guest</h4>
+                                <p id="chat-profile-username" class="text-xs text-slate-500">@guest</p>
+                            </div>
+                        </div>
+                        <div id="chat-mc-status-badge" class="hidden bg-indigo-950/40 border border-indigo-900 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs text-indigo-300">
+                            <i class="fa-solid fa-link text-indigo-400"></i>
+                            <span>เชื่อมโยงสกิน Minecraft สำเร็จ</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hidden md:block pt-4 border-t border-slate-800/60 text-center">
+                    <p class="text-[10px] text-slate-500">บันทึกข้อมูลแบบเรียลไทม์สำเร็จ</p>
+                    <p class="text-[10px] text-slate-500 mt-1">© 2026 MNC Systems Group</p>
+                </div>
+            </div>
+
+            <!-- Right Panel: Chat Area -->
+            <div class="flex-grow flex flex-col h-full bg-slate-900/30">
+                <!-- Chat Window Top Bar -->
+                <div class="bg-slate-900/50 border-b border-slate-800 py-3 px-5 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                        <span class="font-semibold text-sm text-slate-200">#ห้องแชทหลัก (Supabase Table: messages)</span>
+                    </div>
+                    <div id="connection-status-pill" class="flex items-center gap-2 text-slate-400 text-xs">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>เชื่อมต่อสำเร็จ</span>
+                    </div>
+                </div>
+
+                <!-- Messages Stream Area -->
+                <div id="chat-messages-container" class="flex-grow p-4 md:p-6 overflow-y-auto space-y-4 chat-scrollbar flex flex-col">
+                    <!-- Dynamic live messages loaded from Supabase -->
+                </div>
+
+                <!-- Input Panel with image uploading feature -->
+                <div class="p-4 bg-slate-950/40 border-t border-slate-800/80 space-y-3">
+                    
+                    <!-- Selected image preview inside input (Hidden by default) -->
+                    <div id="image-send-preview-box" class="hidden items-center gap-3 bg-slate-900 border border-slate-800 p-2.5 rounded-xl w-fit relative">
+                        <img id="image-send-preview" src="" alt="Selected image to send" class="h-14 rounded-lg object-cover">
+                        <div class="text-xs">
+                            <p class="text-slate-300 font-medium">รูปภาพที่พร้อมจะส่ง</p>
+                            <p class="text-slate-500">จะส่งแนบไปกับข้อความของคุณ</p>
+                        </div>
+                        <button type="button" onclick="clearImagePreview()" class="absolute -top-2 -right-2 w-6 h-6 bg-rose-600 rounded-full flex items-center justify-center text-white text-xs shadow-lg hover:bg-rose-500 cursor-pointer">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <!-- Image Upload Button (Mocked via Unsplash selection) -->
+                        <div class="relative">
+                            <button type="button" onclick="toggleImagePickerModal()" class="w-12 h-12 rounded-2xl bg-slate-850 hover:bg-slate-800 text-slate-400 hover:text-indigo-400 border border-slate-800 flex items-center justify-center transition cursor-pointer" title="แนบรูปภาพ">
+                                <i class="fa-solid fa-image text-lg"></i>
+                            </button>
+                        </div>
+
+                        <!-- Text Input -->
+                        <div class="flex-grow relative">
+                            <input type="text" id="chat-input-text" onkeypress="handleChatKeyPress(event)" class="w-full h-12 bg-slate-950/80 border border-slate-800 rounded-2xl pl-4 pr-12 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition" placeholder="พิมพ์ข้อความที่นี่เพื่อส่งเข้าสู่ระบบ...">
+                            <button type="button" onclick="sendChatMessage()" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition shadow-md shadow-indigo-600/30 cursor-pointer">
+                                <i class="fa-solid fa-paper-plane text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Custom Dialog Modal -->
+    <div id="custom-alert" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl">
+            <div id="alert-icon-wrapper" class="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center">
+                <!-- Icon loaded by JS -->
+            </div>
+            <h3 id="alert-title" class="text-xl font-bold text-white">แจ้งเตือน</h3>
+            <p id="alert-message" class="text-sm text-slate-400 leading-relaxed">รายละเอียดข้อความแจ้งเตือน</p>
+            <button type="button" onclick="closeAlert()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2.5 rounded-xl transition border border-slate-700 cursor-pointer">ตกลง</button>
+        </div>
+    </div>
+
+    <!-- Image Picker Mock Selection Modal -->
+    <div id="image-picker-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-white">เลือกรูปภาพเพื่อส่งเข้าแชท</h3>
+                <button type="button" onclick="toggleImagePickerModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="text-xs text-slate-400">เลือกรูปภาพตัวอย่างด้านล่างนี้เพื่อใช้ในการทดสอบระบบส่งภาพของคุณ:</p>
+            
+            <div class="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
+                <div onclick="selectImageToSend('https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=400&q=80')" class="cursor-pointer border border-slate-800 rounded-xl overflow-hidden hover:border-indigo-500 transition">
+                    <img src="https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=200&q=80" alt="Minecraft-like blocks" class="w-full h-24 object-cover">
+                    <p class="text-[10px] p-1.5 text-center text-slate-400">ทิวทัศน์ 3D</p>
+                </div>
+                <div onclick="selectImageToSend('https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=400&q=80')" class="cursor-pointer border border-slate-800 rounded-xl overflow-hidden hover:border-indigo-500 transition">
+                    <img src="https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=200&q=80" alt="Gaming Setup" class="w-full h-24 object-cover">
+                    <p class="text-[10px] p-1.5 text-center text-slate-400">โต๊ะเกมมิ่ง</p>
+                </div>
+                <div onclick="selectImageToSend('https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&q=80')" class="cursor-pointer border border-slate-800 rounded-xl overflow-hidden hover:border-indigo-500 transition">
+                    <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?w=200&q=80" alt="Esports Gaming" class="w-full h-24 object-cover">
+                    <p class="text-[10px] p-1.5 text-center text-slate-400">สกรีนเกมอีสปอร์ต</p>
+                </div>
+                <div onclick="selectImageToSend('https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&q=80')" class="cursor-pointer border border-slate-800 rounded-xl overflow-hidden hover:border-indigo-500 transition">
+                    <img src="https://images.unsplash.com/photo-1511512578047-dfb367046420?w=200&q=80" alt="Retro Gaming console" class="w-full h-24 object-cover">
+                    <p class="text-[10px] p-1.5 text-center text-slate-400">จอยเกมเรโทร</p>
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button type="button" onclick="toggleImagePickerModal()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 rounded-xl transition text-sm cursor-pointer">ตกลง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tiny Static Footer -->
+    <footer class="w-full py-4 text-center text-xs text-slate-500 bg-slate-950/30 border-t border-slate-900/60 z-20 relative">
+        เชื่อมโยงข้อมูลกับ Supabase ของคุณอย่างเสร็จสมบูรณ์ | chatchat.html
+    </footer>
+
+    <!-- System JavaScript -->
+    <script>
+        // ====================================================
+        // 1. นำ URL และ API Key จาก Supabase ของคุณมาใส่ตรงนี้
+        // ====================================================
+        const SUPABASE_URL = 'https://onxgmtfnvftilrytdhnn.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ueGdtdGZudmZ0aWxyeXRkaG5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzODczNzMsImV4cCI6MjA5NTk2MzM3M30.polmRBvuttpj2yPhpaMxOkC2I-77syj6Uj9BOgnjkLA';
+        
+        // แก้ไขบั๊กสำคัญ: เปลี่ยนชื่อตัวแปรเป็น supabaseClient ป้องกันการชนกับคลาสหลักของ Supabase SDK (window.supabase)
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ตัวแปรเก็บข้อมูลชั่วคราวระหว่างสมัครสมาชิก
+        let regData = {
+            username: '',
+            password: '',
+            nickname: '',
+            mcName: '',
+            avatarUrl: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=John'
+        };
+
+        // สถานะของโปรแกรม
+        let appState = {
+            currentUser: null,
+            selectedImageToSend: null,
+            chatHistory: [],
+            pollingIntervalId: null
+        };
+
+        // ==========================================
+        // ส่วนที่ 1: ฟังก์ชันสมัครสมาชิก (ผูกกับปุ่ม "สร้างบัญชีเสร็จสมบูรณ์")
+        // ==========================================
+        async function finishRegistration() {
+            const loadingSpan = document.getElementById('reg-loading');
+            const textSpan = document.getElementById('reg-btn-text');
+            
+            // แสดงสถานะกำลังโหลด
+            loadingSpan.classList.remove('hidden');
+            textSpan.classList.add('hidden');
+
+            try {
+                // สร้างอีเมลจำลองจาก Username เพราะ Supabase Auth ต้องการอีเมล
+                const fakeEmail = `${regData.username.toLowerCase()}@mnc-connect.local`;
+
+                // 1. ส่งคำขอสร้างบัญชีไปที่ Supabase Auth (ตาราง auth.users)
+                const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+                    email: fakeEmail,
+                    password: regData.password,
+                });
+
+                if (authError) throw authError;
+
+                // 2. ถ้าสร้างบัญชีสำเร็จ ให้นำข้อมูลมาบันทึกลงตาราง profiles
+                if (authData.user) {
+                    const { error: profileError } = await supabaseClient
+                        .from('profiles')
+                        .insert([
+                            { 
+                                id: authData.user.id, // ใช้ ID ที่ได้จาก Auth
+                                username: regData.username,
+                                nickname: regData.nickname,
+                                mc_name: regData.mcName || null,
+                                avatar_url: regData.avatarUrl
+                            }
+                        ]);
+
+                    if (profileError) throw profileError;
+
+                    showAlert('🎉 ยินดีด้วย!', 'สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบด้วย Username และ Password ของคุณ', 'success');
+                    
+                    // ทำการส่งค่าฟอร์ม Login ล่วงหน้าเพื่อให้ผู้ใช้กดได้ทันที
+                    document.getElementById('login-username').value = regData.username;
+                    document.getElementById('login-password').value = regData.password;
+
+                    switchView('login'); // สลับไปหน้าล็อคอิน
+                }
+            } catch (error) {
+                console.error('Registration Error:', error);
+                showAlert('เชื่อมต่อล้มเหลว', error.message || 'โปรดตรวจสอบความถูกต้องของระบบ', 'error');
+            } finally {
+                // คืนค่าปุ่มกลับเป็นปกติ
+                loadingSpan.classList.add('hidden');
+                textSpan.classList.remove('hidden');
+            }
+        }
+
+        // ==========================================
+        // ส่วนที่ 2: ฟังก์ชันบันทึกข้อมูลแต่ละขั้นตอน (ทำงานเมื่อกด Next/ถัดไป)
+        // ==========================================
+        function submitRegStep1() {
+            const user = document.getElementById('reg-username').value.trim();
+            const pass = document.getElementById('reg-password').value.trim();
+            const check = document.getElementById('reg-age-check').checked;
+
+            if (!user || !pass) {
+                showAlert('ระบุข้อมูลไม่ครบถ้วน', 'กรุณากรอก Username และ Password', 'error');
+                return;
+            }
+            if (pass.length < 6) {
+                showAlert('รหัสผ่านสั้นเกินไป', 'รหัสผ่านจะต้องมีอย่างน้อย 6 ตัวอักษรตามมาตรฐานระบบ', 'error');
+                return;
+            }
+            if (!check) {
+                showAlert('จำกัดอายุการใช้งาน', 'กรุณายืนยันอายุ 13 ปีขึ้นไป', 'error');
+                return;
+            }
+
+            regData.username = user;
+            regData.password = pass;
+            
+            // สลับไป Step 2
+            document.getElementById('reg-step-1').classList.add('hidden');
+            document.getElementById('reg-step-2').classList.remove('hidden');
+            updateProgress(2);
+        }
+
+        function submitRegStep2() {
+            const nick = document.getElementById('reg-nickname').value.trim();
+            if (!nick) {
+                showAlert('จำเป็นต้องระบุชื่อ', 'กรุณากรอกชื่อเล่นของคุณ', 'error');
+                return;
+            }
+            
+            regData.nickname = nick;
+            
+            document.getElementById('reg-step-2').classList.add('hidden');
+            document.getElementById('reg-step-3').classList.remove('hidden');
+            updateProgress(3);
+        }
+
+        function submitRegStep3() {
+            const mcName = document.getElementById('reg-mc-name').value.trim();
+            regData.mcName = mcName;
+            
+            document.getElementById('reg-step-3').classList.add('hidden');
+            document.getElementById('reg-step-4').classList.remove('hidden');
+            updateProgress(4);
+        }
+
+        function skipRegStep3() {
+            regData.mcName = ''; // เว้นว่างไว้
+            document.getElementById('reg-step-3').classList.add('hidden');
+            document.getElementById('reg-step-4').classList.remove('hidden');
+            updateProgress(4);
+        }
+
+        // ฟังก์ชันเมื่อกดปุ่มย้อนกลับ (ย้ายกลับทีละขั้นตอนของหน้า Register)
+        function prevRegStep(step) {
+            // ซ่อนทุกหน้าขั้นตอนของสมัครสมาชิกก่อน
+            for(let i = 1; i <= 4; i++) {
+                document.getElementById(`reg-step-${i}`).classList.add('hidden');
+            }
+            // แสดงหน้าขั้นตอนที่ต้องการย้อนกลับไป
+            document.getElementById(`reg-step-${step}`).classList.remove('hidden');
+            updateProgress(step);
+        }
+
+        // ฟังก์ชันอัปเดตเส้น Progress Bar
+        function updateProgress(step) {
+            const line = document.getElementById('progress-line');
+            // คำนวณความยาวเส้น
+            if (step === 1) line.style.width = '0%';
+            if (step === 2) line.style.width = '33%';
+            if (step === 3) line.style.width = '66%';
+            if (step === 4) line.style.width = '100%';
+
+            // อัปเดตสีของตัวเลข
+            for(let i=1; i<=4; i++) {
+                const dot = document.getElementById(`step-dot-${i}`);
+                if (i <= step) {
+                    dot.classList.remove('bg-slate-800', 'text-slate-400');
+                    dot.classList.add('bg-indigo-600', 'text-white');
+                } else {
+                    dot.classList.remove('bg-indigo-600', 'text-white');
+                    dot.classList.add('bg-slate-800', 'text-slate-400');
+                }
+            }
+        }
+
+        // ฟังก์ชันเลือกรูปโปรไฟล์
+        function selectAvatar(elementId, url) {
+            // ล้างกรอบสีของทุกรูป
+            document.querySelectorAll('.avatar-option').forEach(el => {
+                el.classList.remove('border-indigo-500');
+                el.classList.add('border-slate-800');
+            });
+
+            // หากเลือกสกิน Minecraft
+            if (elementId === 'avatar-mc') {
+                if (!regData.mcName) {
+                    showAlert('ฟีเจอร์นี้ล็อกอยู่', 'คุณจะเลือกสกิน Minecraft ได้หลังจากเชื่อมโยงสกินในขั้นตอนที่ 3 สำเร็จแล้วเท่านั้น', 'info');
+                    // ใส่กรอบที่ตัวเลือกแรกเป็น Fallback
+                    const firstEl = document.getElementById('avatar-1');
+                    firstEl.classList.remove('border-slate-800');
+                    firstEl.classList.add('border-indigo-500');
+                    regData.avatarUrl = 'https://api.dicebear.com/7.x/pixel-art/svg?seed=John';
+                    return;
+                }
+                const selectedEl = document.getElementById(elementId);
+                selectedEl.classList.remove('border-slate-800');
+                selectedEl.classList.add('border-indigo-500');
+                regData.avatarUrl = document.getElementById('avatar-mc-img').src;
+            } else {
+                const selectedEl = document.getElementById(elementId);
+                selectedEl.classList.remove('border-slate-800');
+                selectedEl.classList.add('border-indigo-500');
+                regData.avatarUrl = url;
+            }
+        }
+
+        // ฟังก์ชันดึงสกินจำลอง (ตัวอย่าง)
+        function testFetchMinecraftSkin() {
+            const mcName = document.getElementById('reg-mc-name').value.trim();
+            if(!mcName) {
+                showAlert('กรุณากรอกชื่อผู้เล่นก่อน', 'พิมพ์ชื่อผู้เล่นก่อนการดึงสกิน', 'error');
+                return;
+            }
+            
+            const previewImg = document.getElementById('mc-avatar-preview');
+            const status = document.getElementById('mc-preview-status');
+            const mcOption = document.getElementById('avatar-mc');
+            const mcOptionImg = document.getElementById('avatar-mc-img');
+            const mcOptionLock = document.getElementById('avatar-mc-lock');
+            const loader = document.getElementById('mc-avatar-loading');
+
+            loader.classList.remove('hidden');
+
+            // ใช้ Minotar API ดึงสกินแบบ Pixel
+            const skinUrl = `https://minotar.net/helm/${mcName}/64.png`;
+            
+            previewImg.src = skinUrl;
+            
+            previewImg.onload = function() {
+                loader.classList.add('hidden');
+                status.textContent = `พบสกินของ: ${mcName}`;
+                status.className = "text-xs text-emerald-400 mt-2 font-medium";
+
+                // ปลดล็อกตัวเลือกรูปโปรไฟล์ที่ 4
+                mcOption.classList.remove('opacity-40', 'cursor-not-allowed', 'border-dashed');
+                mcOption.classList.add('cursor-pointer');
+                mcOptionLock.classList.add('hidden');
+                mcOptionImg.src = skinUrl;
+                mcOptionImg.classList.remove('hidden');
+                regData.mcName = mcName;
+            };
+
+            previewImg.onerror = function() {
+                loader.classList.add('hidden');
+                status.textContent = "ไม่พบตัวละคร (ใช้ Steve)";
+                status.className = "text-xs text-amber-500 mt-2 font-medium";
+                previewImg.src = "https://minotar.net/helm/Steve/64.png";
+                regData.mcName = '';
+            };
+        }
+
+        // ฟังก์ชันล็อกอินจริงผ่าน Supabase Auth
+        async function submitLogin() {
+            const usernameInput = document.getElementById('login-username').value.trim();
+            const passwordInput = document.getElementById('login-password').value.trim();
+
+            if (!usernameInput || !passwordInput) {
+                showAlert('ระบุข้อมูลไม่ครบถ้วน', 'กรุณากรอก Username และ Password เพื่อเข้าสู่ระบบ', 'error');
+                return;
+            }
+
+            const loginBtnText = document.getElementById('login-btn-text');
+            const loginLoading = document.getElementById('login-loading');
+
+            loginBtnText.classList.add('hidden');
+            loginLoading.classList.remove('hidden');
+
+            try {
+                // สร้างอีเมลจำลองของระบบ MNC Connect เพื่อไป Login ในระบบ Auth ของ Supabase
+                const fakeEmail = `${usernameInput.toLowerCase()}@mnc-connect.local`;
+
+                const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+                    email: fakeEmail,
+                    password: passwordInput,
+                });
+
+                if (authError) throw authError;
+
+                // ดึงข้อมูลเพิ่มเติมจากตาราง profiles
+                if (authData.user) {
+                    const { data: profileData, error: profileError } = await supabaseClient
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', authData.user.id)
+                        .single();
+
+                    if (profileError) throw profileError;
+
+                    // ตั้งค่าเซสชันผู้ใช้ออนไลน์ในระบบ
+                    appState.currentUser = {
+                        id: authData.user.id,
+                        username: profileData.username,
+                        nickname: profileData.nickname,
+                        avatar: profileData.avatar_url,
+                        mcName: profileData.mc_name
+                    };
+
+                    // แสดงภาพโปรไฟล์ผู้ใช้ปัจจุบันบนแถบเนวิเกเตอร์ด้านบน
+                    document.getElementById('header-user').classList.remove('hidden');
+                    document.getElementById('nav-avatar').src = appState.currentUser.avatar;
+                    document.getElementById('nav-username').textContent = appState.currentUser.nickname;
+
+                    // แสดงหน้าต่างข้อมูลโปรไฟล์ห้องแชท
+                    document.getElementById('chat-profile-avatar').src = appState.currentUser.avatar;
+                    document.getElementById('chat-profile-name').textContent = appState.currentUser.nickname;
+                    document.getElementById('chat-profile-username').textContent = `@${appState.currentUser.username}`;
+
+                    const mcBadge = document.getElementById('chat-mc-status-badge');
+                    if (appState.currentUser.mcName) {
+                        mcBadge.classList.remove('hidden');
+                        mcBadge.querySelector('span').textContent = `สกิน Minecraft: ${appState.currentUser.mcName}`;
+                    } else {
+                        mcBadge.classList.add('hidden');
+                    }
+
+                    // โหลดข้อความแชทจากตาราง messages ทันที
+                    await fetchMessagesFromSupabase();
+
+                    showAlert('ลงชื่อเข้าใช้สำเร็จ', `ยินดีต้อนรับกลับมาคุณ ${appState.currentUser.nickname}!`, 'success');
+                    
+                    setTimeout(() => {
+                        closeAlert();
+                        switchView('chat');
+                    }, 1000);
+                }
+
+            } catch (error) {
+                console.error("Login Error:", error);
+                showAlert('ล็อกอินล้มเหลว', 'โปรดตรวจสอบชื่อผู้ใช้หรือรหัสผ่านให้ถูกต้องครบถ้วน', 'error');
+            } finally {
+                loginBtnText.classList.remove('hidden');
+                loginLoading.classList.add('hidden');
+            }
+        }
+
+        // --- FETCH MESSAGES FROM SUPABASE ---
+        async function fetchMessagesFromSupabase() {
+            try {
+                // ดึงข้อความแชทล่าสุดจากตาราง "messages" จัดลำดับเวลาขึ้นจากเก่าไปใหม่
+                const { data, error } = await supabaseClient
+                    .from('messages')
+                    .select('*')
+                    .order('created_at', { ascending: true })
+                    .limit(50);
+
+                if (error) throw error;
+
+                if (data) {
+                    appState.chatHistory = data.map(msg => ({
+                        id: msg.id,
+                        sender: msg.sender_name,
+                        avatar: msg.avatar_url || "https://api.dicebear.com/7.x/pixel-art/svg?seed=John",
+                        message: msg.message,
+                        image: msg.image_url || null,
+                        time: formatTimestamp(msg.created_at)
+                    }));
+                    renderChatHistory();
+                }
+            } catch (error) {
+                console.error("Failed to fetch messages:", error);
+                const pill = document.getElementById('connection-status-pill');
+                if (pill) {
+                    pill.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span><span class="text-rose-400">ตัดการเชื่อมต่อ</span>`;
+                }
+            }
+        }
+
+        // --- POST NEW MESSAGE TO SUPABASE ---
+        async function sendChatMessage() {
+            const textInput = document.getElementById('chat-input-text');
+            const messageText = textInput.value.trim();
+            const imageUrl = appState.selectedImageToSend;
+
+            if (!messageText && !imageUrl) {
+                return;
+            }
+
+            if (!appState.currentUser) {
+                showAlert('กรุณาล็อกอิน', 'คุณยังไม่มีเซสชันการล็อกอินที่ถูกต้อง', 'error');
+                return;
+            }
+
+            const payload = {
+                sender_id: appState.currentUser.id,
+                sender_name: appState.currentUser.nickname,
+                avatar_url: appState.currentUser.avatar,
+                message: messageText || "ส่งรูปภาพ",
+                image_url: imageUrl || ""
+            };
+
+            // เคลียร์ค่า UI ล่วงหน้า เพื่อให้เกิดการตอบสนองที่ไหลลื่นขึ้น
+            textInput.value = '';
+            clearImagePreview();
+
+            try {
+                const { error } = await supabaseClient
+                    .from('messages')
+                    .insert([payload]);
+
+                if (error) throw error;
+
+                // ทำการดึงข้อมูลแชทเพื่อซิงค์ทันที
+                await fetchMessagesFromSupabase();
+
+            } catch (error) {
+                console.error("Failed to send message to Supabase:", error);
+                showAlert('ส่งข้อความล้มเหลว', 'โปรดตรวจสอบตาราง "messages" ใน Supabase ของท่านว่าเปิดใช้งานอยู่หรือไม่', 'error');
+            }
+        }
+
+        // --- CHAT SCROLLER RENDERER ---
+        function renderChatHistory() {
+            const container = document.getElementById('chat-messages-container');
+            const isAtBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 50;
+
+            container.innerHTML = '';
+
+            appState.chatHistory.forEach(chat => {
+                const isMe = chat.sender === appState.currentUser?.nickname;
+                
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `flex gap-3 max-w-[85%] ${isMe ? 'self-end flex-row-reverse' : 'self-start'}`;
+
+                let imageMarkup = '';
+                if (chat.image) {
+                    imageMarkup = `
+                        <div class="mt-2 rounded-xl overflow-hidden border border-slate-800 shadow-md">
+                            <img src="${chat.image}" alt="Chat Attachment" class="max-w-xs md:max-w-sm h-auto max-h-48 object-cover rounded-xl hover:scale-105 transition duration-300">
+                        </div>
+                    `;
+                }
+
+                messageDiv.innerHTML = `
+                    <img src="${chat.avatar}" alt="Sender Avatar" class="w-9 h-9 rounded-xl border border-slate-800 self-end">
+                    <div>
+                        <div class="flex items-center gap-2 ${isMe ? 'justify-end' : ''}">
+                            <span class="text-xs font-semibold text-indigo-300">${chat.sender}</span>
+                            <span class="text-[9px] text-slate-500">${chat.time}</span>
+                        </div>
+                        <div class="mt-1 px-4 py-2.5 rounded-2xl text-sm ${isMe ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-slate-800/80 text-slate-100 rounded-bl-none'}">
+                            <p class="leading-relaxed break-words">${chat.message}</p>
+                            ${imageMarkup}
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(messageDiv);
+            });
+
+            if (isAtBottom || container.children.length <= 5) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        // --- UTILITY FOR TIMESTAMPS ---
+        function formatTimestamp(isoString) {
+            if (!isoString) return "เมื่อครู่";
+            try {
+                const date = new Date(isoString);
+                return date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
+            } catch (e) {
+                return "เมื่อครู่";
+            }
+        }
+
+        // Polling loop for active Real-Time updates
+        function startPolling() {
+            stopPolling();
+            // อัปเดตข้อมูลแบบ Auto-polling ดึงข้อความแชทใหม่ๆ จาก Supabase ทุก 3 วินาที
+            appState.pollingIntervalId = setInterval(async () => {
+                await fetchMessagesFromSupabase();
+            }, 3000);
+        }
+
+        function stopPolling() {
+            if (appState.pollingIntervalId) {
+                clearInterval(appState.pollingIntervalId);
+                appState.pollingIntervalId = null;
+            }
+        }
+
+        // จัดการกับการกด Enter ในช่องส่งข้อความ
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+
+        function toggleImagePickerModal() {
+            const modal = document.getElementById('image-picker-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function selectImageToSend(url) {
+            appState.selectedImageToSend = url;
+            const previewBox = document.getElementById('image-send-preview-box');
+            const previewImg = document.getElementById('image-send-preview');
+            
+            previewImg.src = url;
+            previewBox.classList.remove('hidden');
+            previewBox.classList.add('flex');
+
+            toggleImagePickerModal();
+        }
+
+        function clearImagePreview() {
+            appState.selectedImageToSend = null;
+            const previewBox = document.getElementById('image-send-preview-box');
+            previewBox.classList.remove('flex');
+            previewBox.classList.add('hidden');
+        }
+
+        // Custom Dialog Modal Controllers
+        function showAlert(title, message, type = 'info') {
+            const modal = document.getElementById('custom-alert');
+            const titleEl = document.getElementById('alert-title');
+            const messageEl = document.getElementById('alert-message');
+            const iconWrapper = document.getElementById('alert-icon-wrapper');
+            
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+
+            if (type === 'success') {
+                iconWrapper.className = "w-14 h-14 mx-auto rounded-2xl flex items-center justify-center bg-emerald-500/10 text-emerald-500 border border-emerald-500/30";
+                iconWrapper.innerHTML = `<i class="fa-solid fa-circle-check text-2xl"></i>`;
+            } else if (type === 'error') {
+                iconWrapper.className = "w-14 h-14 mx-auto rounded-2xl flex items-center justify-center bg-rose-500/10 text-rose-500 border border-rose-500/30";
+                iconWrapper.innerHTML = `<i class="fa-solid fa-circle-xmark text-2xl"></i>`;
+            } else {
+                iconWrapper.className = "w-14 h-14 mx-auto rounded-2xl flex items-center justify-center bg-indigo-500/10 text-indigo-500 border border-indigo-500/30";
+                iconWrapper.innerHTML = `<i class="fa-solid fa-circle-info text-2xl"></i>`;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeAlert() {
+            document.getElementById('custom-alert').classList.add('hidden');
+        }
+
+        // ฟังก์ชันสลับหน้าแผงควบคุมหลัก
+        function switchView(viewName) {
+            document.getElementById('view-auth-choice').classList.add('hidden');
+            document.getElementById('view-register').classList.add('hidden');
+            document.getElementById('view-login').classList.add('hidden');
+            document.getElementById('view-chat').classList.add('hidden');
+
+            const targetView = document.getElementById(`view-${viewName}`);
+            if (targetView) {
+                targetView.classList.remove('hidden');
+            }
+
+            if (viewName === 'register') {
+                // รีเซ็ตกลับไปหน้าแรกของการสมัคร
+                document.getElementById('reg-step-1').classList.remove('hidden');
+                document.getElementById('reg-step-2').classList.add('hidden');
+                document.getElementById('reg-step-3').classList.add('hidden');
+                document.getElementById('reg-step-4').classList.add('hidden');
+                updateProgress(1);
+            } else if (viewName === 'chat') {
+                startPolling();
+            } else {
+                stopPolling();
+            }
+        }
+
+        function logout() {
+            stopPolling();
+            appState.currentUser = null;
+            document.getElementById('header-user').classList.add('hidden');
+            switchView('auth-choice');
+        }
+
+        window.onload = function() {
+            // ตั้งค่าดีฟอลต์พรีวิวอวาตาร์ที่ภาพแรก
+            selectAvatar('avatar-1', 'https://api.dicebear.com/7.x/pixel-art/svg?seed=John');
+        };
+    </script>
+</body>
+</html>
+
+```
