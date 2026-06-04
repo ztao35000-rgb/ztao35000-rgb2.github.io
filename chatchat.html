@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft CoCommunitymmunity Chat & Auth</title>
+    <title>Community Chat & Auth</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
@@ -17,490 +18,416 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        /* ต้นฉบับของคุณ 100% */
-        body {
-            font-family: 'Kanit', sans-serif;
-            background: radial-gradient(circle at center, #1e1b4b 0%, #020617 100%);
+        body { font-family: 'Kanit', sans-serif; background: radial-gradient(circle at center, #1e1b4b 0%, #020617 100%); }
+        .image-render-pixelated { image-rendering: pixelated; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .avatar-option.selected { border-color: #6366f1; background-color: rgba(99, 102, 241, 0.2); transform: scale(1.05); }
+        .prevent-select { user-select: none; -webkit-user-select: none; }
+        
+        /* Animation สำหรับหน้าจอ Fake Call */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            100% { transform: scale(1.5); opacity: 0; }
         }
-        .image-render-pixelated {
-            image-rendering: pixelated;
-        }
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        .avatar-option.selected {
-            border-color: #6366f1;
-            background-color: rgba(99, 102, 241, 0.2);
-            transform: scale(1.05);
-        }
-        /* ป้องกันการคลุมดำข้อความเวลาแตะค้างบนมือถือ */
-        .prevent-select {
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            -khtml-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
+        .animate-pulse-ring {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
         }
     </style>
 </head>
 <body class="min-h-screen text-slate-100 flex items-center justify-center p-4 md:p-6 overflow-x-hidden relative">
 
-    <!-- ================= MAIN CONTAINER ================= -->
-    <div class="w-full max-w-5xl flex flex-col items-center justify-center relative">
+    <div class="w-full max-w-5xl flex flex-col items-center justify-center relative z-10">
         
-        <!-- แถบแจ้งเตือนลอย (Custom Notification Popup) -->
+        <!-- Toast -->
         <div id="toast" class="fixed top-5 right-5 z-[9999] transform translate-y-[-150%] transition-transform duration-300 ease-out bg-slate-900 border-l-4 border-indigo-500 py-3 px-5 rounded-r-xl shadow-2xl flex items-center gap-3">
             <span id="toast-icon" class="text-indigo-400 text-lg"><i class="fa-solid fa-bell"></i></span>
             <span id="toast-msg" class="text-sm font-medium text-white">ข้อความแจ้งเตือน</span>
         </div>
 
-        <!-- ================= START/WELCOME VIEW ================= -->
-        <div id="view-auth-choice" class="w-full max-w-md bg-slate-900/60 backdrop-blur-lg border border-slate-800 p-8 rounded-3xl shadow-2xl transition-all duration-300 text-center space-y-8 relative block">
+        <!-- ================= WELCOME VIEW ================= -->
+        <div id="view-auth-choice" class="w-full max-w-md bg-slate-900/60 backdrop-blur-lg border border-slate-800 p-8 rounded-3xl shadow-2xl text-center space-y-8 relative block">
             <div class="space-y-3">
                 <div class="w-20 h-20 bg-indigo-600/10 border border-indigo-500/30 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/10">
                     <i class="fa-solid fa-cubes text-4xl text-indigo-500"></i>
                 </div>
                 <h1 class="text-3xl font-bold text-white mb-2">ยินดีต้อนรับ</h1>
-                <p class="text-slate-400">ระบบเชื่อมต่อบัญชี Minecraft และแชทคอมมูนิตี้ที่ทำงานผ่าน Supabase Authentication</p>
+                <p class="text-slate-400 text-sm">ระบบเชื่อมต่อบัญชีเกม Minecraft/Roblox และแชทคอมมูนิตี้ผ่าน Supabase</p>
             </div>
             
-            <div class="space-y-4 relative z-20">
-                <button type="button" onclick="switchView('register')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-4 px-6 rounded-2xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer relative z-20">
+            <div class="space-y-4">
+                <button onclick="switchView('register')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-4 px-6 rounded-2xl transition flex items-center justify-center gap-2">
                     <i class="fa-solid fa-user-plus"></i> สมัครใช้งาน (Sign Up)
                 </button>
-                <button type="button" onclick="switchView('login')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-4 px-6 rounded-2xl transition border border-slate-700 flex items-center justify-center gap-2 cursor-pointer relative z-20">
+                <button onclick="switchView('login')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-4 px-6 rounded-2xl transition border border-slate-700 flex items-center justify-center gap-2">
                     <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ (Log In)
                 </button>
                 
                 <div class="relative flex py-2 items-center">
                     <div class="flex-grow border-t border-slate-800"></div>
-                    <span class="flex-shrink mx-4 text-xs text-slate-500 uppercase tracking-wider">หรือเข้าใช้งานด่วน</span>
+                    <span class="flex-shrink mx-4 text-xs text-slate-500 uppercase">หรือเข้าใช้งานด่วน</span>
                     <div class="flex-grow border-t border-slate-800"></div>
                 </div>
                 
-                <!-- ปุ่มเข้าระบบ Guest -->
-                <button type="button" onclick="loginAsGuest()" class="w-full bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 font-medium py-4 px-6 rounded-2xl transition flex items-center justify-center gap-2 cursor-pointer relative z-20">
+                <button onclick="loginAsGuest()" class="w-full bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 font-medium py-4 px-6 rounded-2xl transition flex items-center justify-center gap-2">
                     <i class="fa-solid fa-user-secret"></i> เข้าใช้งานในฐานะ Guest
                 </button>
                 
-                <!-- ปุ่มกู้คืนบัญชีด้วย UUID -->
-                <button type="button" onclick="openRecoveryModal()" class="w-full bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/30 font-medium py-3 px-6 rounded-2xl transition flex items-center justify-center gap-2 cursor-pointer relative z-20 text-sm mt-2">
+                <button onclick="openRecoveryModal()" class="w-full bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/30 font-medium py-3 px-6 rounded-2xl transition flex items-center justify-center gap-2 text-sm mt-2">
                     <i class="fa-solid fa-key"></i> กู้คืนบัญชีด้วย UUID
                 </button>
             </div>
         </div>
 
         <!-- ================= LOGIN VIEW ================= -->
-        <div id="view-login" class="hidden w-full max-w-md bg-slate-900/60 backdrop-blur-lg border border-slate-800 p-8 rounded-3xl shadow-2xl transition-all duration-300 text-center space-y-6 relative">
+        <div id="view-login" class="hidden w-full max-w-md bg-slate-900/60 backdrop-blur-lg border border-slate-800 p-8 rounded-3xl shadow-2xl text-center space-y-6 relative">
             <div>
                 <h2 class="text-2xl font-bold text-white mb-1">เข้าสู่ระบบ</h2>
                 <p class="text-sm text-slate-400">กรอกข้อมูลบัญชีของคุณ</p>
             </div>
             <div class="space-y-4 text-left">
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Username - ชื่อผู้ใช้</label>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Username</label>
                     <div class="relative">
                         <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                        <input type="text" id="login-username" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition" placeholder="Username">
+                        <input type="text" id="login-username" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Password - รหัสผ่าน</label>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Password</label>
                     <div class="relative">
                         <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                        <input type="password" id="login-password" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition" placeholder="Password">
+                        <input type="password" id="login-password" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition">
                     </div>
                 </div>
             </div>
             <div class="flex gap-3 pt-4">
-                <button type="button" onclick="switchView('auth-choice')" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3.5 rounded-2xl transition cursor-pointer">ย้อนกลับ</button>
-                <button type="button" onclick="doLogin()" class="w-2/3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3.5 rounded-2xl transition shadow-lg shadow-indigo-600/20 cursor-pointer">เข้าสู่ระบบ</button>
+                <button onclick="switchView('auth-choice')" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3.5 rounded-2xl transition">ย้อนกลับ</button>
+                <button onclick="doLogin()" class="w-2/3 bg-indigo-600 hover:bg-indigo-500 text-white py-3.5 rounded-2xl transition">เข้าสู่ระบบ</button>
             </div>
         </div>
 
-        <!-- ================= REGISTER FLOW (4 STEPS) ================= -->
-        <div id="view-register" class="hidden w-full max-w-lg bg-slate-900/60 backdrop-blur-lg border border-slate-800 p-6 md:p-8 rounded-3xl shadow-2xl transition-all duration-300 relative">
-            <!-- Progress Tracker -->
+        <!-- ================= REGISTER FLOW ================= -->
+        <div id="view-register" class="hidden w-full max-w-lg bg-slate-900/60 backdrop-blur-lg border border-slate-800 p-6 md:p-8 rounded-3xl shadow-2xl relative">
             <div class="mb-8">
                 <div class="flex items-center justify-between relative">
                     <div class="absolute left-0 right-0 top-1/2 h-0.5 bg-slate-800 -z-10"></div>
                     <div id="progress-line" class="absolute left-0 top-1/2 h-0.5 bg-indigo-500 transition-all duration-300 -z-10" style="width: 0%"></div>
-                    
-                    <div class="step-indicator flex flex-col items-center">
-                        <div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm border-4 border-slate-900 transition-all duration-300" id="step-dot-1">1</div>
-                        <span class="text-xs mt-1 text-indigo-400 font-medium">บัญชี</span>
-                    </div>
-                    <div class="step-indicator flex flex-col items-center">
-                        <div class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm border-4 border-slate-900 transition-all duration-300" id="step-dot-2">2</div>
-                        <span class="text-xs mt-1 text-slate-500">ข้อมูล</span>
-                    </div>
-                    <div class="step-indicator flex flex-col items-center">
-                        <div class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm border-4 border-slate-900 transition-all duration-300" id="step-dot-3">3</div>
-                        <span class="text-xs mt-1 text-slate-500">Minecraft</span>
-                    </div>
-                    <div class="step-indicator flex flex-col items-center">
-                        <div class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm border-4 border-slate-900 transition-all duration-300" id="step-dot-4">4</div>
-                        <span class="text-xs mt-1 text-slate-500">โปรไฟล์</span>
-                    </div>
+                    <div class="step-indicator flex flex-col items-center"><div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm border-4 border-slate-900" id="step-dot-1">1</div><span class="text-[10px] mt-1 text-indigo-400">บัญชี</span></div>
+                    <div class="step-indicator flex flex-col items-center"><div class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm border-4 border-slate-900" id="step-dot-2">2</div><span class="text-[10px] mt-1 text-slate-500">ข้อมูล</span></div>
+                    <div class="step-indicator flex flex-col items-center"><div class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm border-4 border-slate-900" id="step-dot-3">3</div><span class="text-[10px] mt-1 text-slate-500">ผูกเกม</span></div>
+                    <div class="step-indicator flex flex-col items-center"><div class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm border-4 border-slate-900" id="step-dot-4">4</div><span class="text-[10px] mt-1 text-slate-500">โปรไฟล์</span></div>
                 </div>
             </div>
 
-            <!-- STEP 1: ACCOUNT DETAILS -->
+            <!-- STEP 1 -->
             <div id="reg-step-1" class="space-y-6 block">
-                <div>
-                    <h2 class="text-2xl font-bold text-white mb-1">สร้างบัญชีผู้ใช้</h2>
-                    <p class="text-sm text-slate-400">กรอกข้อมูลบัญชีเพื่อใช้ลงทะเบียนในระบบ Supabase</p>
-                </div>
+                <h2 class="text-2xl font-bold text-white mb-1">สร้างบัญชีผู้ใช้</h2>
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Username - ชื่อผู้ใช้</label>
-                        <div class="relative">
-                            <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                            <input type="text" id="reg-username" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition" placeholder="เช่น Hello12345">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Password - รหัสผ่าน (ขั้นต่ำ 6 ตัวอักษร)</label>
-                        <div class="relative">
-                            <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                            <input type="password" id="reg-password" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition" placeholder="รหัสผ่านของคุณ">
-                        </div>
-                    </div>
+                    <div class="relative"><i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i><input type="text" id="reg-username" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:border-indigo-500" placeholder="Username (ชื่อผู้ใช้)"></div>
+                    <div class="relative"><i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i><input type="password" id="reg-password" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:border-indigo-500" placeholder="Password (รหัสผ่าน ขั้นต่ำ 6 ตัว)"></div>
                     <div class="flex items-start gap-3 p-4 bg-slate-950/30 rounded-2xl border border-slate-800">
-                        <input type="checkbox" id="reg-age-check" class="mt-1 w-5 h-5 rounded border-slate-800 bg-slate-950 text-indigo-600 focus:ring-0 cursor-pointer">
-                        <label for="reg-age-check" class="text-sm text-slate-300 leading-snug cursor-pointer select-none">
-                            I am 13 years of age or older.<br>
-                            <span class="text-xs text-slate-500 font-normal">ฉันมีอายุ 13 ปีขึ้นไป</span>
-                        </label>
+                        <input type="checkbox" id="reg-age-check" class="mt-1 w-5 h-5 rounded border-slate-800 bg-slate-950 text-indigo-600">
+                        <label class="text-sm text-slate-300">ฉันมีอายุ 13 ปีขึ้นไป</label>
                     </div>
                 </div>
                 <div class="flex gap-3 pt-4">
-                    <button type="button" onclick="switchView('auth-choice')" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3.5 rounded-2xl transition cursor-pointer">ย้อนกลับ</button>
-                    <button type="button" onclick="submitRegStep1()" class="w-2/3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3.5 rounded-2xl transition shadow-lg shadow-indigo-600/20 cursor-pointer">Next / ถัดไป</button>
+                    <button onclick="switchView('auth-choice')" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-white py-3.5 rounded-2xl transition">ย้อนกลับ</button>
+                    <button onclick="submitRegStep1()" class="w-2/3 bg-indigo-600 hover:bg-indigo-500 text-white py-3.5 rounded-2xl transition">ถัดไป</button>
                 </div>
             </div>
 
-            <!-- STEP 2: PROFILE NAME -->
+            <!-- STEP 2 -->
             <div id="reg-step-2" class="hidden space-y-6">
-                <div>
-                    <h2 class="text-2xl font-bold text-white mb-1">ข้อมูลส่วนตัว</h2>
-                    <p class="text-sm text-slate-400">ระบุชื่อเล่นหรือชื่อที่คุณต้องการให้แสดงในระบบแชท</p>
-                </div>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Name - ชื่อเล่นของคุณ</label>
-                        <div class="relative">
-                            <i class="fa-solid fa-signature absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                            <input type="text" id="reg-nickname" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition" placeholder="เช่น Fold475">
-                        </div>
-                    </div>
-                </div>
+                <h2 class="text-2xl font-bold text-white mb-1">ข้อมูลส่วนตัว</h2>
+                <div class="relative"><i class="fa-solid fa-signature absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i><input type="text" id="reg-nickname" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:border-indigo-500" placeholder="ชื่อเล่น เช่น Fold475"></div>
                 <div class="flex gap-3 pt-4">
-                    <button type="button" onclick="prevRegStep(1)" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3.5 rounded-2xl transition cursor-pointer">ย้อนกลับ</button>
-                    <button type="button" onclick="submitRegStep2()" class="w-2/3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3.5 rounded-2xl transition shadow-lg shadow-indigo-600/20 cursor-pointer">Next / ถัดไป</button>
+                    <button onclick="prevRegStep(1)" class="w-1/3 bg-slate-800 text-white py-3.5 rounded-2xl">ย้อนกลับ</button>
+                    <button onclick="submitRegStep2()" class="w-2/3 bg-indigo-600 text-white py-3.5 rounded-2xl">ถัดไป</button>
                 </div>
             </div>
 
-            <!-- STEP 3: MINECRAFT LINK -->
+            <!-- STEP 3: CROSS-PLATFORM -->
             <div id="reg-step-3" class="hidden space-y-6">
                 <div>
-                    <h2 class="text-2xl font-bold text-white mb-1">Minecraft Integration</h2>
-                    <p class="text-sm text-slate-400">เชื่อมต่อสกินตัวละครของคุณเข้ามายังระบบ</p>
+                    <h2 class="text-2xl font-bold text-white mb-1">เชื่อมต่อบัญชีเกม</h2>
+                    <p class="text-sm text-slate-400">เลือกดึงอวาตาร์จากเกมที่คุณชื่นชอบ</p>
                 </div>
                 
-                <div class="bg-indigo-950/30 border border-indigo-900/50 p-4 rounded-2xl text-xs text-indigo-300 leading-relaxed flex gap-3">
-                    <i class="fa-solid fa-circle-info text-base mt-0.5 text-indigo-400"></i>
-                    <div>
-                        ระบบเชื่อมต่อนี้จะดึงรูปภาพของใบหน้าและตัวละครจากบัญชี <strong class="text-white font-semibold">Minecraft Java Edition</strong> ตามชื่อที่คุณระบุ เพื่อนำมาแปลงเป็นสกินโปรไฟล์ภายในเซิร์ฟเวอร์ของเรา
-                    </div>
+                <div class="grid grid-cols-2 gap-2 bg-slate-950/80 p-1 rounded-2xl border border-slate-800">
+                    <button onclick="switchPlatformTab('minecraft')" id="tab-mc" class="py-2.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-cube"></i> Minecraft
+                    </button>
+                    <button onclick="switchPlatformTab('roblox')" id="tab-rb" class="py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-gamepad"></i> Roblox
+                    </button>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                     <div class="md:col-span-2 space-y-4">
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Minecraft PlayerName - ชื่อผู้เล่น</label>
-                            <div class="relative">
-                                <i class="fa-solid fa-gamepad absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                                <input type="text" id="reg-mc-name" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition" placeholder="เช่น Player3880">
+                        <div id="input-mc">
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Minecraft Java Username</label>
+                            <div class="relative mb-4">
+                                <i class="fa-solid fa-cube absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                <input type="text" id="reg-mc-name" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:border-indigo-500" placeholder="ชื่อผู้เล่น">
                             </div>
+                            <button onclick="testFetchGameSkin()" class="w-full bg-slate-800 hover:bg-slate-700 text-xs py-3 rounded-xl border border-slate-700 text-indigo-300 font-medium transition flex items-center justify-center gap-2"><i class="fa-solid fa-rotate"></i> ดึงภาพจาก Minecraft</button>
                         </div>
-                        <button type="button" onclick="testFetchMinecraftSkin()" class="w-full bg-slate-800 hover:bg-slate-700 text-xs py-2 px-4 rounded-xl border border-slate-700 text-indigo-300 font-medium transition flex items-center justify-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-rotate"></i> ดึงภาพสกินตัวละคร
-                        </button>
+                        <div id="input-rb" class="hidden">
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Roblox Authorization</label>
+                            <p class="text-xs text-slate-500 mb-4">เชื่อมต่อผ่านแพลตฟอร์มของ Roblox เพื่อยืนยันตัวตน</p>
+                            <button onclick="openRobloxOAuthModal()" class="w-full bg-white hover:bg-slate-200 text-slate-900 font-bold py-3.5 px-4 rounded-2xl transition flex items-center justify-center gap-3 shadow-lg">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Roblox_player_icon_black.svg" class="w-5 h-5">
+                                Connect with Roblox
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="flex flex-col items-center justify-center p-4 bg-slate-950/50 border border-slate-800 rounded-2xl aspect-square">
-                        <span class="text-xs text-slate-500 mb-2">สกินจำลอง</span>
-                        <div class="relative w-16 h-16 bg-slate-900 border-2 border-indigo-500 rounded-xl overflow-hidden flex items-center justify-center shadow-lg shadow-indigo-500/10">
-                            <!-- Minecraft avatar fallback API -->
-                            <img id="mc-avatar-preview" src="https://minotar.net/helm/Steve/64.png" alt="Minecraft Skin" class="w-12 h-12 image-render-pixelated">
-                            <div id="mc-avatar-loading" class="hidden absolute inset-0 bg-slate-950/80 flex items-center justify-center">
-                                <i class="fa-solid fa-spinner animate-spin text-indigo-500"></i>
-                            </div>
+                        <span class="text-xs text-slate-500 mb-2">ตัวอย่าง</span>
+                        <div class="relative w-16 h-16 bg-slate-900 border-2 border-indigo-500 rounded-xl overflow-hidden flex items-center justify-center shadow-lg">
+                            <img id="game-avatar-preview" src="https://minotar.net/helm/Steve/64.png" class="w-12 h-12 image-render-pixelated object-cover transition-opacity duration-300">
                         </div>
-                        <span id="mc-preview-status" class="text-xs text-slate-500 mt-2 font-medium">สกินเริ่มต้น</span>
+                        <span id="game-preview-status" class="text-[10px] text-slate-500 mt-2 font-medium text-center">รอเชื่อมต่อ...</span>
                     </div>
                 </div>
 
                 <div class="flex gap-3 pt-4">
-                    <button type="button" onclick="prevRegStep(2)" class="w-1/4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3.5 rounded-2xl transition text-sm cursor-pointer">ย้อนกลับ</button>
-                    <button type="button" onclick="skipRegStep3()" class="w-1/4 bg-slate-800/40 hover:bg-slate-800 text-slate-400 font-medium py-3.5 rounded-2xl transition border border-slate-800 text-sm cursor-pointer">Skip / ข้าม</button>
-                    <button type="button" onclick="submitRegStep3()" class="w-2/4 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3.5 rounded-2xl transition shadow-lg shadow-indigo-600/20 text-sm cursor-pointer">Next / ถัดไป</button>
+                    <button onclick="prevRegStep(2)" class="w-1/4 bg-slate-800 text-white py-3.5 rounded-2xl text-sm">ย้อนกลับ</button>
+                    <button onclick="skipRegStep3()" class="w-1/4 bg-slate-800/40 border border-slate-800 text-slate-400 py-3.5 rounded-2xl text-sm">ข้าม</button>
+                    <button onclick="submitRegStep3()" class="w-2/4 bg-indigo-600 text-white py-3.5 rounded-2xl text-sm">ถัดไป</button>
                 </div>
             </div>
 
-            <!-- STEP 4: CHOOSE PROFILE PICTURE -->
+            <!-- STEP 4 -->
             <div id="reg-step-4" class="hidden space-y-6">
-                <div>
-                    <h2 class="text-2xl font-bold text-white mb-1">เลือกรูปโปรไฟล์ของคุณ</h2>
-                    <p class="text-sm text-slate-400">ปรับแต่งรูปโปรไฟล์เพื่อเปิดตัวในห้องแชท</p>
-                </div>
-
+                <div><h2 class="text-2xl font-bold text-white mb-1">เลือกรูปโปรไฟล์ของคุณ</h2></div>
                 <div class="space-y-4">
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">โปรไฟล์ที่แนะนำ</label>
                     <div class="grid grid-cols-4 gap-3">
-                        <div onclick="selectAvatar('avatar-1', 'https://api.dicebear.com/7.x/pixel-art/svg?seed=John')" id="avatar-1" class="avatar-option selected cursor-pointer p-1.5 rounded-2xl border-2 border-slate-800 bg-slate-950/50 hover:border-indigo-500 transition flex items-center justify-center aspect-square">
-                            <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=John" alt="Avatar 1" class="w-12 h-12 rounded-xl">
-                        </div>
-                        <div onclick="selectAvatar('avatar-2', 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Sara')" id="avatar-2" class="avatar-option cursor-pointer p-1.5 rounded-2xl border-2 border-slate-800 bg-slate-950/50 hover:border-indigo-500 transition flex items-center justify-center aspect-square">
-                            <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=Sara" alt="Avatar 2" class="w-12 h-12 rounded-xl">
-                        </div>
-                        <div onclick="selectAvatar('avatar-3', 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Steve')" id="avatar-3" class="avatar-option cursor-pointer p-1.5 rounded-2xl border-2 border-slate-800 bg-slate-950/50 hover:border-indigo-500 transition flex items-center justify-center aspect-square">
-                            <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=Steve" alt="Avatar 3" class="w-12 h-12 rounded-xl">
-                        </div>
-                        <div onclick="selectAvatar('avatar-mc', null)" id="avatar-mc" class="avatar-option opacity-40 cursor-not-allowed p-1.5 rounded-2xl border-2 border-dashed border-slate-800 bg-slate-950/50 hover:border-indigo-500 transition flex flex-col items-center justify-center aspect-square relative">
-                            <img id="avatar-mc-img" src="https://minotar.net/helm/Steve/64.png" alt="Minecraft Custom" class="w-12 h-12 rounded-xl hidden">
-                            <div id="avatar-mc-lock" class="flex flex-col items-center">
-                                <i class="fa-solid fa-lock text-sm text-slate-500"></i>
-                                <span class="text-[9px] text-slate-500 mt-1">Minecraft</span>
-                            </div>
+                        <div onclick="selectAvatar('avatar-1', 'https://api.dicebear.com/7.x/pixel-art/svg?seed=John')" id="avatar-1" class="avatar-option selected cursor-pointer p-1.5 rounded-2xl border-2 border-slate-800 bg-slate-950/50"><img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=John" class="w-12 h-12 rounded-xl mx-auto"></div>
+                        <div onclick="selectAvatar('avatar-2', 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Sara')" id="avatar-2" class="avatar-option cursor-pointer p-1.5 rounded-2xl border-2 border-slate-800 bg-slate-950/50"><img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=Sara" class="w-12 h-12 rounded-xl mx-auto"></div>
+                        <div onclick="selectAvatar('avatar-3', 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Steve')" id="avatar-3" class="avatar-option cursor-pointer p-1.5 rounded-2xl border-2 border-slate-800 bg-slate-950/50"><img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=Steve" class="w-12 h-12 rounded-xl mx-auto"></div>
+                        <div onclick="selectAvatar('avatar-game', null)" id="avatar-game" class="avatar-option opacity-40 cursor-not-allowed p-1.5 rounded-2xl border-2 border-dashed border-slate-800 bg-slate-950/50 flex flex-col items-center justify-center relative">
+                            <img id="avatar-game-img" src="" class="w-12 h-12 rounded-xl hidden object-cover">
+                            <div id="avatar-game-lock" class="text-center"><i class="fa-solid fa-lock text-sm text-slate-500"></i><div class="text-[9px] text-slate-500 mt-1">เกมอวาตาร์</div></div>
                         </div>
                     </div>
-
-                    <!-- เพิ่มตัวเลือกอัปโหลดโปรไฟล์จากเครื่อง -->
                     <div class="mt-4 p-3 bg-slate-900/50 border border-slate-800 rounded-2xl flex items-center gap-3">
                         <input type="file" id="reg-avatar-file" accept="image/*" class="hidden" onchange="handleRegAvatarUpload(event)">
-                        <button type="button" onclick="document.getElementById('reg-avatar-file').click()" class="bg-indigo-600/20 text-indigo-400 text-xs py-2 px-4 rounded-xl border border-indigo-500/30 transition hover:bg-indigo-600/40 cursor-pointer">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> หรืออัปโหลดจากเครื่อง
-                        </button>
+                        <button onclick="document.getElementById('reg-avatar-file').click()" class="bg-indigo-600/20 text-indigo-400 text-xs py-2 px-4 rounded-xl border border-indigo-500/30">อัปโหลดรูป</button>
                         <span id="reg-avatar-filename" class="text-xs text-slate-500 truncate w-32">ยังไม่ได้เลือกไฟล์</span>
                     </div>
-
-                    <div class="p-4 bg-slate-950/40 border border-slate-800 rounded-2xl text-center space-y-2 mt-4">
-                        <p class="text-xs text-slate-400">คุณสามารถเปลี่ยนรูปโปรไฟล์ได้ในภายหลัง</p>
-                    </div>
                 </div>
-
                 <div class="flex gap-3 pt-4">
-                    <button type="button" onclick="prevRegStep(3)" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3.5 rounded-2xl transition cursor-pointer">ย้อนกลับ</button>
-                    <button type="button" onclick="finishRegistration()" class="w-2/3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3.5 rounded-2xl transition shadow-lg shadow-indigo-600/20 cursor-pointer">เสร็จสิ้น</button>
+                    <button onclick="prevRegStep(3)" class="w-1/3 bg-slate-800 text-white py-3.5 rounded-2xl">ย้อนกลับ</button>
+                    <button onclick="finishRegistration()" class="w-2/3 bg-indigo-600 text-white py-3.5 rounded-2xl">เสร็จสิ้น</button>
                 </div>
             </div>
         </div>
 
         <!-- ================= CHAT VIEW ================= -->
-        <!-- นำรหัส UUID ออกจากมุมซ้ายบนแล้ว เพื่อป้องกันดักจับเวลา Live สดลง YouTube -->
-        <div id="view-chat" class="hidden w-full max-w-4xl h-[85vh] bg-slate-900/60 backdrop-blur-lg border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden relative">
-            <!-- Header -->
+        <div id="view-chat" class="hidden w-full max-w-4xl h-[85vh] bg-slate-900/60 backdrop-blur-lg border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
             <div class="bg-slate-950/50 p-4 flex justify-between border-b border-slate-800 items-center">
                 <div class="flex gap-3 items-center">
-                    <img id="chat-my-avatar" src="" class="w-10 h-10 rounded-xl border border-indigo-500 bg-slate-800">
+                    <img id="chat-my-avatar" src="" onclick="openSecurityModal()" class="w-10 h-10 rounded-xl border border-indigo-500 bg-slate-800 cursor-pointer hover:scale-105 transition shrink-0" title="ตั้งค่าความปลอดภัย">
                     <div>
-                        <div class="text-white font-bold flex items-center gap-2">
-                            <span id="chat-my-name">Name</span>
-                            <span id="guest-badge" class="hidden text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">GUEST</span>
-                        </div>
-                        <div class="text-[10px] text-emerald-400 flex items-center gap-1">
-                            <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span> คอมมูนิตี้เชื่อมโยง Supabase สำเร็จ
-                        </div>
+                        <div class="text-white font-bold flex items-center gap-2"><span id="chat-my-name">Name</span><span id="guest-badge" class="hidden text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">GUEST</span></div>
+                        <div class="text-[10px] text-emerald-400"><span class="w-2 h-2 bg-emerald-400 rounded-full inline-block animate-pulse"></span> เชื่อมต่อฐานข้อมูลสำเร็จ</div>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <!-- เพิ่มปุ่มฟันเฟืองสำหรับเปิดความปลอดภัย (Security Settings) ตรงนี้เพื่อความปลอดภัย -->
-                    <button onclick="openSecurityModal()" class="text-slate-400 hover:text-indigo-400 p-2 rounded-lg hover:bg-slate-800 transition cursor-pointer" title="การตั้งค่าความปลอดภัย">
-                        <i class="fa-solid fa-shield-halved"></i>
-                    </button>
-                    <button onclick="logout()" class="text-slate-400 hover:text-red-400 p-2 rounded-lg hover:bg-slate-800 transition cursor-pointer" title="ออกจากระบบ">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                    </button>
+                
+                <div class="flex items-center gap-1 md:gap-2">
+                    <button onclick="startFakeGroupCall()" class="text-slate-400 hover:text-emerald-400 p-2 rounded-lg hover:bg-slate-800 transition cursor-pointer" title="โทรวิดีโอคอล"><i class="fa-solid fa-video text-lg"></i></button>
+                    <button onclick="openSecurityModal()" class="text-slate-400 hover:text-indigo-400 p-2 rounded-lg hover:bg-slate-800 transition cursor-pointer" title="ตั้งค่าความปลอดภัย"><i class="fa-solid fa-shield-halved text-lg"></i></button>
+                    <button onclick="logout()" class="text-slate-400 hover:text-red-400 p-2 rounded-lg hover:bg-slate-800 transition cursor-pointer" title="ออกจากระบบ"><i class="fa-solid fa-right-from-bracket text-lg"></i></button>
                 </div>
             </div>
 
-            <!-- Messages Box -->
             <div id="chat-messages" class="flex-1 p-4 overflow-y-auto no-scrollbar space-y-4 flex flex-col"></div>
 
-            <!-- Input Area -->
-            <div class="bg-slate-950/80 p-3 md:p-4 border-t border-slate-800">
+            <div class="bg-slate-950/80 p-3 md:p-4 border-t border-slate-800 shrink-0">
                 <div id="chat-image-preview-container" class="hidden mb-3 relative inline-block">
                     <img id="chat-image-preview" src="" class="h-20 rounded-lg border border-slate-700 shadow-lg">
-                    <button onclick="removeChatImage()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-lg hover:bg-red-600 transition">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+                    <button onclick="removeChatImage()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div class="flex gap-2 items-center">
                     <input type="file" id="chat-image-upload" accept="image/*" class="hidden" onchange="handleChatImageSelect(event)">
-                    <button onclick="document.getElementById('chat-image-upload').click()" class="w-12 h-12 rounded-xl bg-slate-800 text-slate-400 hover:text-indigo-400 hover:bg-slate-700 transition flex items-center justify-center shrink-0 cursor-pointer">
-                        <i class="fa-solid fa-image"></i>
-                    </button>
-                    <input type="text" id="chat-input" class="flex-1 bg-slate-900 border border-slate-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-indigo-500 transition" placeholder="พิมพ์ข้อความ..." onkeypress="handleEnter(event)">
-                    <button onclick="sendMessage()" class="w-12 h-12 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20 flex items-center justify-center shrink-0 cursor-pointer">
-                        <i class="fa-solid fa-paper-plane"></i>
-                    </button>
+                    <button onclick="document.getElementById('chat-image-upload').click()" class="w-12 h-12 rounded-xl bg-slate-800 text-slate-400 hover:text-indigo-400 flex items-center justify-center shrink-0 cursor-pointer"><i class="fa-solid fa-image"></i></button>
+                    <input type="text" id="chat-input" class="flex-1 bg-slate-900 border border-slate-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-indigo-500" placeholder="พิมพ์ข้อความ..." onkeypress="handleEnter(event)">
+                    <button onclick="sendMessage()" class="w-12 h-12 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 flex items-center justify-center shrink-0 cursor-pointer"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
             </div>
         </div>
-
     </div> <!-- End Main Container -->
 
-    <!-- ================= MODAL กู้คืนบัญชี UUID ================= -->
-    <div id="modal-recovery" class="hidden fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="w-full max-w-sm bg-slate-900/90 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl shadow-2xl space-y-6 relative text-center">
-            <button onclick="closeRecoveryModal()" class="absolute top-4 right-4 text-slate-500 hover:text-red-400 transition cursor-pointer">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-            <div>
-                <i class="fa-solid fa-key text-4xl text-amber-500 mb-3 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]"></i>
-                <h3 class="text-xl font-bold text-white mb-1">กู้คืนบัญชีด้วย UUID</h3>
-                <p class="text-xs text-slate-400">กรอกรหัส UUID ที่เคยคัดลอกไว้ เพื่อดึงชื่อและรูปโปรไฟล์เดิมกลับมา</p>
+    <!-- ================= MODALS ================= -->
+
+    <!-- FAKE VIDEO CALL -->
+    <div id="modal-fake-call" class="hidden fixed inset-0 z-[999999] bg-slate-950 flex flex-col">
+        <div class="absolute top-16 w-full text-center z-20 px-4">
+            <h2 id="fake-call-name" class="text-3xl font-bold text-white drop-shadow-md">Username</h2>
+            <p id="fake-call-status" class="text-slate-300 mt-2 text-sm tracking-widest">กำลังโทร...</p>
+            <p id="fake-call-timer" class="text-emerald-400 font-mono mt-2 text-lg hidden tracking-widest">00:00</p>
+        </div>
+        <div class="flex-1 relative flex items-center justify-center overflow-hidden">
+            <div id="fake-call-ring-bg" class="absolute inset-0 bg-indigo-900/30 flex items-center justify-center">
+                <div class="w-64 h-64 rounded-full border border-indigo-500/50 animate-pulse-ring"></div>
             </div>
-            
-            <div class="text-left relative">
-                <i class="fa-solid fa-fingerprint absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                <input type="text" id="recovery-uuid-input" class="w-full bg-slate-950/60 border border-slate-800 rounded-xl py-3.5 pl-11 pr-4 text-white focus:outline-none focus:border-amber-500 transition text-sm" placeholder="เช่น guest-670435 หรือ uuid-...">
+            <img id="fake-call-avatar" src="" class="w-48 h-48 rounded-full border-4 border-slate-700 shadow-2xl z-10 object-cover relative">
+        </div>
+        <div class="absolute bottom-36 right-6 w-28 h-36 bg-slate-800 rounded-xl border-2 border-slate-600 overflow-hidden shadow-2xl z-20">
+            <img id="fake-call-self-avatar" src="" class="w-full h-full object-cover opacity-80 filter contrast-125">
+            <div class="absolute bottom-1 right-1 text-[8px] bg-black/50 px-1 rounded text-white"><i class="fa-solid fa-video"></i> You</div>
+        </div>
+        <div class="h-32 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 flex items-center justify-center gap-8 z-20 pb-4">
+            <button onclick="toggleFakeCam()" id="btn-fake-cam" class="w-14 h-14 rounded-full bg-slate-700 text-white flex items-center justify-center text-xl hover:bg-slate-600 transition shadow-lg"><i class="fa-solid fa-video"></i></button>
+            <button onclick="closeFakeCall()" class="w-20 h-20 rounded-full bg-red-600 text-white flex items-center justify-center text-3xl hover:bg-red-500 transition shadow-[0_0_20px_rgba(220,38,38,0.4)]"><i class="fa-solid fa-phone-slash"></i></button>
+            <button onclick="toggleFakeMic()" id="btn-fake-mic" class="w-14 h-14 rounded-full bg-slate-700 text-white flex items-center justify-center text-xl hover:bg-slate-600 transition shadow-lg"><i class="fa-solid fa-microphone"></i></button>
+        </div>
+    </div>
+
+    <!-- IMAGE VIEWER LIGHTBOX -->
+    <div id="modal-image-viewer" class="hidden fixed inset-0 z-[999999] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 opacity-0 cursor-zoom-out" onclick="closeImageViewer()">
+        <button onclick="closeImageViewer()" class="absolute top-6 right-6 text-white hover:text-red-400 transition cursor-pointer z-50">
+            <i class="fa-solid fa-xmark text-4xl"></i>
+        </button>
+        <img id="full-screen-image" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl scale-95 transition-transform duration-300" onclick="event.stopPropagation()">
+    </div>
+
+    <!-- ROBLOX OAUTH -->
+    <div id="modal-roblox-oauth" class="hidden fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-white rounded-xl shadow-2xl overflow-hidden text-slate-900 relative">
+            <div class="bg-slate-100 border-b border-slate-300 p-2 flex items-center justify-center relative">
+                <button onclick="closeRobloxOAuthModal()" class="absolute left-3 text-slate-500 hover:text-slate-800"><i class="fa-solid fa-xmark"></i></button>
+                <div class="text-[10px] font-mono text-green-700 flex items-center gap-1 bg-slate-200 py-1 px-3 rounded-full"><i class="fa-solid fa-lock"></i> authorize.roblox.com</div>
             </div>
-            
-            <div class="flex gap-3">
-                <button onclick="closeRecoveryModal()" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3 rounded-xl transition cursor-pointer">ยกเลิก</button>
-                <button onclick="submitAccountRecovery()" class="w-2/3 bg-amber-600 hover:bg-amber-500 text-white font-medium py-3 rounded-xl transition shadow-lg shadow-amber-600/20 cursor-pointer flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-unlock-keyhole"></i> กู้คืนสิทธิ์
-                </button>
+            <div class="p-6 text-center space-y-4">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Roblox_player_icon_black.svg" class="w-12 h-12 mx-auto mb-2">
+                <h3 class="text-lg font-bold">Log in to Roblox</h3>
+                <p class="text-xs text-slate-500">Minecraft Chat กำลังขอสิทธิ์การเข้าถึงอวาตาร์ของคุณ</p>
+                <div class="text-left mt-4">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อตัวละคร Roblox (Username)</label>
+                    <input type="text" id="oauth-rb-id" class="w-full border border-slate-300 rounded-lg py-2.5 px-3 text-sm focus:border-slate-500 focus:outline-none" placeholder="เช่น ROB หรือ Username ของคุณ">
+                </div>
+                <div class="pt-2 flex flex-col gap-2">
+                    <button onclick="authorizeRoblox()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-lg text-sm transition shadow-lg">Authorize / อนุญาต</button>
+                    <button onclick="closeRobloxOAuthModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-lg text-sm transition">Cancel</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ================= MODAL การตั้งค่าความปลอดภัย (SECURITY SETTINGS) ================= -->
-    <!-- ป้องกัน UUID รั่วไหลผ่านกล้อง/YouTube ด้วยระบบเปิดปิดหน้าจอดวงตา -->
+    <!-- กู้คืนบัญชี -->
+    <div id="modal-recovery" class="hidden fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl space-y-6 relative text-center">
+            <button onclick="closeRecoveryModal()" class="absolute top-4 right-4 text-slate-500 hover:text-red-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <div><i class="fa-solid fa-key text-4xl text-amber-500 mb-3"></i><h3 class="text-xl font-bold text-white mb-1">กู้คืนบัญชีด้วย UUID</h3><p class="text-xs text-slate-400">กรอกรหัส UUID ที่เคยคัดลอกไว้</p></div>
+            <div class="relative"><i class="fa-solid fa-fingerprint absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i><input type="text" id="recovery-uuid-input" class="w-full bg-slate-950/60 border border-slate-800 rounded-xl py-3.5 pl-11 pr-4 text-white text-sm" placeholder="เช่น guest-670435"></div>
+            <div class="flex gap-3"><button onclick="closeRecoveryModal()" class="w-1/3 bg-slate-800 text-white py-3 rounded-xl">ยกเลิก</button><button onclick="submitAccountRecovery()" class="w-2/3 bg-amber-600 text-white font-medium py-3 rounded-xl flex items-center justify-center gap-2"><i class="fa-solid fa-unlock-keyhole"></i> กู้คืนสิทธิ์</button></div>
+        </div>
+    </div>
+
+    <!-- ความปลอดภัย UUID -->
     <div id="modal-security" class="hidden fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="w-full max-w-md bg-slate-900/95 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl shadow-2xl space-y-6 relative text-center">
-            <button onclick="closeSecurityModal()" class="absolute top-4 right-4 text-slate-500 hover:text-red-400 transition cursor-pointer">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-            <div>
-                <i class="fa-solid fa-shield-halved text-4xl text-indigo-500 mb-3 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]"></i>
-                <h3 class="text-xl font-bold text-white mb-1">การตั้งค่าความปลอดภัย</h3>
-                <p class="text-xs text-slate-400 leading-relaxed">รหัส UUID เป็นสิทธิ์สำคัญสำหรับกู้คืนบัญชี ห้ามแบ่งปันและห้ามแสดงรหัสนี้แก่สาธารณะเด็ดขาด</p>
-            </div>
-            
+        <div class="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl space-y-6 relative text-center">
+            <button onclick="closeSecurityModal()" class="absolute top-4 right-4 text-slate-500 hover:text-red-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <div><i class="fa-solid fa-shield-halved text-4xl text-indigo-500 mb-3"></i><h3 class="text-xl font-bold text-white mb-1">การตั้งค่าความปลอดภัย</h3><p class="text-xs text-slate-400">ห้ามแสดงรหัสนี้ให้ใครเห็นเด็ดขาด (ป้องกันโดนดูดไอดี)</p></div>
             <div class="space-y-4 text-left bg-slate-950/40 p-4 rounded-2xl border border-slate-800/80">
-                <div>
-                    <span class="text-xs text-slate-400 block mb-1">ชื่อในคอมมูนิตี้</span>
-                    <span id="security-display-name" class="text-sm font-semibold text-white">...</span>
-                </div>
-                <div class="border-t border-slate-800 pt-3">
-                    <span class="text-xs text-slate-400 block mb-2">รหัส UUID ประจำตัว</span>
+                <div><span class="text-xs text-slate-400 block mb-1">ชื่อในคอมมูนิตี้</span><span id="security-display-name" class="text-sm font-semibold text-white">...</span></div>
+                <div class="border-t border-slate-800 pt-3"><span class="text-xs text-slate-400 block mb-2">รหัส UUID ประจำตัว</span>
                     <div class="flex items-center gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                        <i class="fa-solid fa-fingerprint text-indigo-400"></i>
-                        <!-- แสดงผลแบบบดบังค่า -->
-                        <span id="security-uuid-value" class="text-xs text-slate-300 font-mono flex-1 select-all">************************************</span>
-                        <button onclick="toggleUUIDVisibility()" class="text-slate-400 hover:text-white p-1" title="แสดง/ซ่อนรหัส">
-                            <i id="toggle-uuid-icon" class="fa-solid fa-eye-slash"></i>
-                        </button>
+                        <i class="fa-solid fa-fingerprint text-indigo-400"></i><span id="security-uuid-value" class="text-xs text-slate-300 font-mono flex-1 select-all">**********************</span>
+                        <button onclick="toggleUUIDVisibility()" class="text-slate-400 hover:text-white p-1"><i id="toggle-uuid-icon" class="fa-solid fa-eye-slash"></i></button>
                     </div>
                 </div>
             </div>
+            <div class="flex gap-3"><button onclick="copyMyUUID()" class="w-1/2 bg-indigo-600 text-white font-medium py-3 rounded-xl flex items-center justify-center gap-2 text-sm"><i class="fa-solid fa-copy"></i> คัดลอกรหัส UUID</button><button onclick="closeSecurityModal()" class="w-1/2 bg-slate-800 text-slate-300 py-3 rounded-xl text-sm">ปิดหน้าต่าง</button></div>
+        </div>
+    </div>
+
+    <!-- ดูโปรไฟล์ผู้ใช้อื่น -->
+    <div id="modal-view-profile" class="hidden fixed inset-0 z-[99999] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-slate-900 border border-indigo-500/40 p-6 rounded-3xl shadow-2xl shadow-indigo-500/10 space-y-6 relative text-center">
+            <button onclick="closeProfileModal()" class="absolute top-4 right-4 text-slate-500 hover:text-red-400 cursor-pointer"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <div class="flex flex-col items-center space-y-3 pt-2">
+                <div class="relative"><img id="profile-view-avatar" src="" class="w-24 h-24 rounded-2xl border-4 border-slate-800 object-cover bg-slate-950"><span id="profile-view-badge" class="hidden absolute -bottom-2 right-1/2 translate-x-1/2 text-[9px] bg-emerald-500/90 text-white px-2 py-0.5 rounded-full font-bold">GUEST</span></div>
+                <div><h3 id="profile-view-name" class="text-xl font-bold text-white">...</h3><p class="text-[11px] text-indigo-400 mt-0.5 font-medium"><span class="w-2 h-2 bg-green-500 rounded-full inline-block mr-1 animate-pulse"></span>ออนไลน์ในระบบ</p></div>
+            </div>
+            <div class="bg-slate-950/50 p-4 rounded-2xl border border-slate-800 text-left space-y-3">
+                <div class="flex items-center justify-between text-xs"><span class="text-slate-400">สถานะผู้ใช้งาน</span><span id="profile-view-type" class="text-white font-medium">สมาชิกปกติ</span></div>
+                <div class="border-t border-slate-800/80 pt-3 space-y-2">
+                    <div class="flex items-center justify-between text-xs"><span class="text-slate-400">ชื่อในเกม (Game Profile)</span><span id="profile-view-mc-name" class="text-white font-medium">ไม่ได้ผูกบัญชี</span></div>
+                    <div id="profile-view-skin-box" class="hidden flex items-center justify-center p-2 bg-slate-900/60 rounded-xl border border-slate-800 gap-3"><img id="profile-view-mc-head" src="" class="w-10 h-10 image-render-pixelated object-cover rounded-md"><span class="text-[10px] text-slate-400 leading-snug">สกินตัวละครหลัก</span></div>
+                </div>
+            </div>
             
-            <div class="flex gap-3">
-                <button onclick="copyMyUUID()" class="w-1/2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 text-sm shadow-lg shadow-indigo-500/20">
-                    <i class="fa-solid fa-copy"></i> คัดลอกรหัส UUID
+            <div class="flex gap-2 w-full mt-4 border-t border-slate-800/80 pt-4">
+                <button onclick="startFakeCall()" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-medium py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-lg shadow-green-600/20 cursor-pointer">
+                    <i class="fa-solid fa-video"></i> โทรวิดีโอคอล
                 </button>
-                <button onclick="closeSecurityModal()" class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3 rounded-xl transition cursor-pointer text-sm">
-                    ปิดหน้าต่าง
+                <button onclick="closeProfileModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3 rounded-xl transition text-sm cursor-pointer">
+                    ปิด
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Context Menu เมนูคลิกขวา -->
-    <div id="context-menu" class="hidden absolute bg-slate-800 border border-slate-700 rounded-xl shadow-2xl py-2 w-32 z-[99999]">
-        <button onclick="initEditMessage()" class="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 hover:text-indigo-400 flex items-center gap-2 transition cursor-pointer">
+    <!-- [UPDATED] Context Menu (ปรับโครงสร้างใหม่เพิ่มปุ่มดาวน์โหลดรูปภาพอัจฉริยะ) -->
+    <div id="context-menu" class="hidden absolute bg-slate-800 border border-slate-700 rounded-xl py-2 w-36 z-[99999] shadow-2xl">
+        <!-- ปุ่มแก้ไข (แสดงเฉพาะข้อความของเรา) -->
+        <button id="menu-btn-edit" onclick="initEditMessage()" class="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 hover:text-indigo-400 flex items-center gap-2 transition cursor-pointer">
             <i class="fa-solid fa-pen"></i> แก้ไข
         </button>
-        <button onclick="deleteMessage()" class="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700 hover:text-red-300 flex items-center gap-2 transition border-t border-slate-700 cursor-pointer">
+        <!-- ปุ่มดาวน์โหลดรูปภาพ (ตรวจจับแบบ Dynamic: แสดงเมื่อข้อความนั้นมีรูปภาพ ไม่ว่าจะเป็นของใครก็ตาม) -->
+        <button id="menu-btn-download" onclick="downloadSelectedImage()" class="w-full text-left px-4 py-2 text-sm text-amber-400 hover:bg-slate-700 hover:text-amber-300 flex items-center gap-2 transition cursor-pointer border-t border-slate-700/50">
+            <i class="fa-solid fa-circle-arrow-down"></i> ดาวน์โหลดรูป
+        </button>
+        <!-- ปุ่มลบ (แสดงเฉพาะข้อความของเรา) -->
+        <button id="menu-btn-delete" onclick="deleteMessage()" class="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700 hover:text-red-300 flex items-center gap-2 transition border-t border-slate-700 cursor-pointer">
             <i class="fa-solid fa-trash"></i> ลบ
         </button>
     </div>
 
     <!-- ================= JAVASCRIPT ================= -->
     <script>
-        // ----------------------------------------------------
-        // ส่วนจัดการฐานข้อมูล (Supabase)
-        // ----------------------------------------------------
         const SUPABASE_URL = 'https://onxgmtfnvftilrytdhnn.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ueGdtdGZudmZ0aWxyeXRkaG5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzODczNzMsImV4cCI6MjA5NTk2MzM3M30.polmRBvuttpj2yPhpaMxOkC2I-77syj6Uj9BOgnjkLA';
         let supabaseClient = null;
 
         let currentUser = null;
-        let regData = { username: '', password: '', nickname: '', mcName: '' };
+        let regData = { username: '', password: '', nickname: '', gamePlatform: 'minecraft', gameName: '' };
         let selectedAvatarUrl = 'https://api.dicebear.com/7.x/pixel-art/svg?seed=John';
         let chatImageBase64 = null;
+        
         let selectedMessageId = null;
+        let selectedMessageImageUrl = null; // สำหรับเก็บค่าลิงก์รูปภาพที่ต้องการดาวน์โหลด
         let pressTimer = null;
-        let isUUIDVisible = false; // ปิดสถานะ UUID ไว้เริ่มต้น
+        let isUUIDVisible = false;
+        
+        let currentViewedProfile = null;
 
-        // โหลดเสร็จแล้วทำงาน
         window.addEventListener('load', function() {
-            try {
-                if (window.supabase) {
-                    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                }
-            } catch (e) {
-                console.error("Supabase โหลดผิดพลาด:", e);
-            }
-
+            if (window.supabase) supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             const savedUser = localStorage.getItem('mc_chat_user');
             if (savedUser) {
-                try {
-                    currentUser = JSON.parse(savedUser);
-                    initChatScreen();
-                } catch(e) {}
+                try { currentUser = JSON.parse(savedUser); initChatScreen(); } catch(e) {}
             }
         });
 
-        // ----------------------------------------------------
-        // UI & Utilities
-        // ----------------------------------------------------
         function showToast(msg, type = 'info') {
             const toast = document.getElementById('toast');
-            const icon = document.getElementById('toast-icon');
-            if (!toast) return;
-
             document.getElementById('toast-msg').textContent = msg;
-            toast.className = "fixed top-5 right-5 z-[9999] transform transition-transform duration-300 ease-out bg-slate-900 border-l-4 py-3 px-5 rounded-r-xl shadow-2xl flex items-center gap-3";
-            
-            if(type === 'error') {
-                toast.classList.add('border-red-500');
-                icon.innerHTML = '<i class="fa-solid fa-circle-exclamation text-red-400"></i>';
-            } else if(type === 'success') {
-                toast.classList.add('border-emerald-500');
-                icon.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400"></i>';
-            } else {
-                toast.classList.add('border-indigo-500');
-                icon.innerHTML = '<i class="fa-solid fa-bell text-indigo-400"></i>';
-            }
-            
+            toast.className = "fixed top-5 right-5 z-[99999] transform transition-transform duration-300 ease-out bg-slate-900 border-l-4 py-3 px-5 rounded-r-xl shadow-2xl flex items-center gap-3";
+            if(type === 'error') toast.classList.add('border-red-500');
+            else if(type === 'success') toast.classList.add('border-emerald-500');
+            else toast.classList.add('border-indigo-500');
             toast.classList.remove('translate-y-[-150%]');
             setTimeout(() => { toast.classList.add('translate-y-[-150%]'); }, 3000);
         }
 
         function switchView(viewId) {
             try {
-                const views = ['auth-choice', 'register', 'login', 'chat'];
-                views.forEach(v => {
+                ['auth-choice', 'register', 'login', 'chat'].forEach(v => {
                     const el = document.getElementById('view-' + v);
                     if (el) {
                         if (v === viewId) {
@@ -513,162 +440,255 @@
                     }
                 });
                 if (viewId === 'register') showRegStep(1);
-            } catch(e) { console.error(e); }
+            } catch(e) {}
         }
 
-        // ----------------------------------------------------
-        // ระบบกู้คืน UUID (ดึงตรงจาก profiles)
-        // ----------------------------------------------------
-        function openRecoveryModal() {
-            document.getElementById('modal-recovery').classList.remove('hidden');
-        }
-        function closeRecoveryModal() {
-            document.getElementById('modal-recovery').classList.add('hidden');
-            document.getElementById('recovery-uuid-input').value = '';
-        }
-
+        // --- ระบบกู้คืน UUID ---
+        function openRecoveryModal() { document.getElementById('modal-recovery').classList.remove('hidden'); }
+        function closeRecoveryModal() { document.getElementById('modal-recovery').classList.add('hidden'); }
         async function submitAccountRecovery() {
             const uuid = document.getElementById('recovery-uuid-input').value.trim();
             if (!uuid) return showToast('กรุณากรอกรหัส UUID', 'error');
-
-            showToast('กำลังกู้คืนบัญชี...', 'info');
-
+            showToast('กำลังค้นหาข้อมูล...', 'info');
             try {
                 if (!supabaseClient) throw new Error("ไม่สามารถเชื่อมต่อฐานข้อมูลได้");
-
-                let recoveredName = 'User';
-                let recoveredAvatar = 'https://api.dicebear.com/7.x/pixel-art/svg?seed=' + uuid;
-                let isGuest = uuid.startsWith('guest-');
-                let found = false;
-
-                // 1. ตรวจสอบตาราง profiles 
+                let recoveredName = 'User', recoveredAvatar = 'https://api.dicebear.com/7.x/pixel-art/svg?seed=' + uuid;
+                let isGuest = uuid.startsWith('guest-'), found = false;
                 try {
-                    const { data: profile } = await supabaseClient
-                        .from('profiles')
-                        .select('nickname, avatar_url')
-                        .eq('id', uuid)
-                        .single();
-
-                    if (profile) {
-                        recoveredName = profile.nickname || recoveredName;
-                        recoveredAvatar = profile.avatar_url || recoveredAvatar;
-                        found = true;
-                    }
+                    const { data: profile } = await supabaseClient.from('profiles').select('nickname, avatar_url').eq('id', uuid).single();
+                    if (profile) { recoveredName = profile.nickname || recoveredName; recoveredAvatar = profile.avatar_url || recoveredAvatar; found = true; }
                 } catch (e) {}
-
-                // 2. ถ้าไม่เจอ ค้นหาในประวัติแชท (messages -> sender_id)
                 if (!found) {
                     try {
-                        const { data: msgData } = await supabaseClient
-                            .from('messages')
-                            .select('sender_name, avatar_url')
-                            .eq('sender_id', uuid)
-                            .order('created_at', { ascending: false })
-                            .limit(1);
-
-                        if (msgData && msgData.length > 0) {
-                            recoveredName = msgData[0].sender_name || recoveredName;
-                            recoveredAvatar = msgData[0].avatar_url || recoveredAvatar;
-                            found = true;
-                        }
+                        const { data: msgData } = await supabaseClient.from('messages').select('sender_name, avatar_url').eq('sender_id', uuid).order('created_at', { ascending: false }).limit(1);
+                        if (msgData && msgData.length > 0) { recoveredName = msgData[0].sender_name || recoveredName; recoveredAvatar = msgData[0].avatar_url || recoveredAvatar; found = true; }
                     } catch (e) {}
                 }
-
-                if (!found && !isGuest) {
-                    throw new Error("ไม่พบข้อมูล UUID นี้ในระบบ");
-                }
-
-                currentUser = {
-                    id: uuid,
-                    username: recoveredName,
-                    avatar: recoveredAvatar,
-                    isGuest: isGuest
-                };
-
+                if (!found && !isGuest) throw new Error("ไม่พบข้อมูล UUID");
+                currentUser = { id: uuid, username: recoveredName, avatar: recoveredAvatar, isGuest: isGuest };
                 localStorage.setItem('mc_chat_user', JSON.stringify(currentUser));
-                closeRecoveryModal();
-                initChatScreen();
-                showToast('กู้คืนสิทธิ์คอมมูนิตี้สำเร็จแล้ว!', 'success');
-
-            } catch (err) {
-                showToast(err.message || 'กู้คืนล้มเหลว', 'error');
-            }
+                closeRecoveryModal(); initChatScreen(); showToast('กู้คืนบัญชีสำเร็จ!', 'success');
+            } catch (err) { showToast(err.message || 'กู้คืนล้มเหลว', 'error'); }
         }
 
-        // ----------------------------------------------------
-        // หน้าต่างความปลอดภัย (Security Settings)
-        // ----------------------------------------------------
         function openSecurityModal() {
             if(!currentUser) return;
             document.getElementById('security-display-name').textContent = currentUser.username;
-            
-            // รีเซ็ตการซ่อนรหัสเพื่อความปลอดภัย
             isUUIDVisible = false;
             document.getElementById('security-uuid-value').textContent = '************************************';
             document.getElementById('toggle-uuid-icon').className = 'fa-solid fa-eye-slash';
-            
             document.getElementById('modal-security').classList.remove('hidden');
         }
-
-        function closeSecurityModal() {
-            document.getElementById('modal-security').classList.add('hidden');
-        }
-
+        function closeSecurityModal() { document.getElementById('modal-security').classList.add('hidden'); }
         function toggleUUIDVisibility() {
             if(!currentUser) return;
             const valueEl = document.getElementById('security-uuid-value');
             const iconEl = document.getElementById('toggle-uuid-icon');
-            
             isUUIDVisible = !isUUIDVisible;
-            if(isUUIDVisible) {
-                valueEl.textContent = currentUser.id;
-                iconEl.className = 'fa-solid fa-eye text-indigo-400';
-            } else {
-                valueEl.textContent = '************************************';
-                iconEl.className = 'fa-solid fa-eye-slash';
-            }
+            if(isUUIDVisible) { valueEl.textContent = currentUser.id; iconEl.className = 'fa-solid fa-eye text-indigo-400'; } 
+            else { valueEl.textContent = '************************************'; iconEl.className = 'fa-solid fa-eye-slash'; }
         }
-
         function copyMyUUID() {
             if (!currentUser) return;
-            navigator.clipboard.writeText(currentUser.id).then(() => {
-                showToast('คัดลอก UUID เก็บลงคลิปบอร์ดแล้ว!', 'success');
-            }).catch(err => {
-                const tempInput = document.createElement('input');
-                tempInput.value = currentUser.id;
-                document.body.appendChild(tempInput);
-                tempInput.select();
-                document.execCommand('copy');
-                document.body.removeChild(tempInput);
-                showToast('คัดลอก UUID เก็บลงคลิปบอร์ดแล้ว!', 'success');
+            navigator.clipboard.writeText(currentUser.id).then(() => { showToast('คัดลอก UUID แล้ว', 'success'); })
+            .catch(() => {
+                const i = document.createElement('input'); i.value = currentUser.id; document.body.appendChild(i);
+                i.select(); document.execCommand('copy'); document.body.removeChild(i); showToast('คัดลอก UUID แล้ว', 'success');
             });
         }
 
-        // ----------------------------------------------------
-        // ขั้นตอนการสมัครใช้งาน (Register Flow)
-        // ----------------------------------------------------
-        function updateProgress(step) {
-            const line = document.getElementById('progress-line');
-            const perc = {1: '0%', 2: '33%', 3: '66%', 4: '100%'};
-            if(line) line.style.width = perc[step];
+        // --- ระบบเปิดดูรูปภาพเต็มจอ (Image Viewer Lightbox) ---
+        function openImageViewer(url) {
+            const modal = document.getElementById('modal-image-viewer');
+            const img = document.getElementById('full-screen-image');
+            if (modal && img) {
+                img.src = url;
+                modal.classList.remove('hidden');
+                setTimeout(() => { modal.classList.remove('opacity-0'); img.classList.replace('scale-95', 'scale-100'); }, 10);
+            }
+        }
+        function closeImageViewer() {
+            const modal = document.getElementById('modal-image-viewer');
+            const img = document.getElementById('full-screen-image');
+            if (modal && img) {
+                modal.classList.add('opacity-0'); img.classList.replace('scale-100', 'scale-95');
+                setTimeout(() => { modal.classList.add('hidden'); img.src = ''; }, 300);
+            }
+        }
 
+        // --- ระบบดาวน์โหลดรูปภาพ ---
+        function downloadSelectedImage() {
+            if (!selectedMessageImageUrl) return showToast('ไม่พบไฟล์รูปภาพ', 'error');
+            try {
+                showToast('กำลังดาวน์โหลดรูปภาพ...', 'info');
+                const link = document.createElement('a');
+                link.href = selectedMessageImageUrl;
+                link.download = `chat-photo-${Date.now()}.png`; // ตั้งชื่อไฟล์ให้ไม่ซ้ำกัน
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showToast('ดาวน์โหลดรูปภาพสำเร็จแล้ว!', 'success');
+            } catch (err) {
+                showToast('ดาวน์โหลดล้มเหลว', 'error');
+            }
+        }
+
+        // --- ระบบโปรไฟล์ผู้ใช้อื่น ---
+        async function openUserProfile(userId, senderName, avatarUrl) {
+            if(!userId) return;
+            currentViewedProfile = { id: userId, name: senderName || 'User', avatar: avatarUrl || 'https://api.dicebear.com/7.x/pixel-art/svg?seed=fallback' };
+
+            document.getElementById('profile-view-name').textContent = currentViewedProfile.name;
+            document.getElementById('profile-view-avatar').src = currentViewedProfile.avatar;
+            const badgeEl = document.getElementById('profile-view-badge');
+            const typeEl = document.getElementById('profile-view-type');
+            const mcNameEl = document.getElementById('profile-view-mc-name');
+            const skinBox = document.getElementById('profile-view-skin-box');
+            const mcHeadImg = document.getElementById('profile-view-mc-head');
+
+            if(userId.startsWith('guest-')) {
+                badgeEl.classList.remove('hidden'); typeEl.textContent = 'ผู้ใช้งานด่วน (GUEST)'; mcNameEl.textContent = 'ไม่มีข้อมูลเกมในระบบ Guest'; skinBox.classList.add('hidden');
+            } else {
+                badgeEl.classList.add('hidden'); typeEl.textContent = 'สมาชิกคอมมูนิตี้'; mcNameEl.textContent = 'กำลังตรวจสอบ...'; skinBox.classList.add('hidden');
+            }
+            document.getElementById('modal-view-profile').classList.remove('hidden');
+
+            if (supabaseClient && !userId.startsWith('guest-')) {
+                try {
+                    const { data: profile } = await supabaseClient.from('profiles').select('nickname, mc_name, avatar_url').eq('id', userId).single();
+                    if (profile) {
+                        currentViewedProfile.name = profile.nickname || senderName;
+                        document.getElementById('profile-view-name').textContent = currentViewedProfile.name;
+                        if(profile.avatar_url) { currentViewedProfile.avatar = profile.avatar_url; document.getElementById('profile-view-avatar').src = profile.avatar_url; }
+                        if(profile.mc_name) {
+                            mcNameEl.textContent = profile.mc_name;
+                            mcHeadImg.src = isNaN(profile.mc_name) ? `https://minotar.net/helm/${profile.mc_name}/64.png` : profile.avatar_url;
+                            skinBox.classList.remove('hidden');
+                        } else mcNameEl.textContent = 'ไม่ได้ผูกบัญชีเกม';
+                    } else mcNameEl.textContent = 'ไม่ได้ผูกบัญชีเกม';
+                } catch(e) { mcNameEl.textContent = 'ไม่สามารถดึงข้อมูลได้'; }
+            }
+        }
+        function closeProfileModal() { document.getElementById('modal-view-profile').classList.add('hidden'); }
+
+        let fakeCallTimeout = null;
+        let fakeCallInterval = null;
+        let fakeCallSeconds = 0;
+        let fakeMicMuted = false;
+        let fakeCamOff = false;
+
+        // วิดีโอคอลตัวต่อตัว (จากโปรไฟล์)
+        function startFakeCall() {
+            if(!currentViewedProfile) return;
+            closeProfileModal();
+
+            document.getElementById('fake-call-name').textContent = currentViewedProfile.name;
+            document.getElementById('fake-call-avatar').src = currentViewedProfile.avatar;
+            document.getElementById('fake-call-self-avatar').src = currentUser ? currentUser.avatar : 'https://api.dicebear.com/7.x/pixel-art/svg?seed=fallback';
+
+            document.getElementById('fake-call-status').textContent = 'กำลังโทร...';
+            document.getElementById('fake-call-status').classList.remove('hidden');
+            document.getElementById('fake-call-timer').classList.add('hidden');
+            
+            const ringBg = document.getElementById('fake-call-ring-bg');
+            ringBg.classList.remove('hidden');
+
+            document.getElementById('modal-fake-call').classList.remove('hidden');
+
+            fakeCallTimeout = setTimeout(() => {
+                document.getElementById('fake-call-status').classList.add('hidden');
+                document.getElementById('fake-call-timer').classList.remove('hidden');
+                ringBg.classList.add('hidden');
+
+                fakeCallSeconds = 0;
+                document.getElementById('fake-call-timer').textContent = '00:00';
+                fakeCallInterval = setInterval(() => {
+                    fakeCallSeconds++;
+                    let mins = Math.floor(fakeCallSeconds / 60).toString().padStart(2, '0');
+                    let secs = (fakeCallSeconds % 60).toString().padStart(2, '0');
+                    document.getElementById('fake-call-timer').textContent = `${mins}:${secs}`;
+                }, 1000);
+            }, 3000);
+        }
+
+        // วิดีโอคอลห้องรวม
+        function startFakeGroupCall() {
+            document.getElementById('fake-call-name').textContent = "Community Group";
+            document.getElementById('fake-call-avatar').src = "https://api.dicebear.com/7.x/shapes/svg?seed=community&backgroundColor=1e1b4b";
+            document.getElementById('fake-call-self-avatar').src = currentUser ? currentUser.avatar : 'https://api.dicebear.com/7.x/pixel-art/svg?seed=fallback';
+
+            document.getElementById('fake-call-status').textContent = 'กำลังโทรเข้าห้องรวม...';
+            document.getElementById('fake-call-status').classList.remove('hidden');
+            document.getElementById('fake-call-timer').classList.add('hidden');
+            
+            const ringBg = document.getElementById('fake-call-ring-bg');
+            ringBg.classList.remove('hidden');
+
+            document.getElementById('modal-fake-call').classList.remove('hidden');
+
+            fakeCallTimeout = setTimeout(() => {
+                document.getElementById('fake-call-status').classList.add('hidden');
+                document.getElementById('fake-call-timer').classList.remove('hidden');
+                ringBg.classList.add('hidden');
+
+                fakeCallSeconds = 0;
+                document.getElementById('fake-call-timer').textContent = '00:00';
+                fakeCallInterval = setInterval(() => {
+                    fakeCallSeconds++;
+                    let mins = Math.floor(fakeCallSeconds / 60).toString().padStart(2, '0');
+                    let secs = (fakeCallSeconds % 60).toString().padStart(2, '0');
+                    document.getElementById('fake-call-timer').textContent = `${mins}:${secs}`;
+                }, 1000);
+            }, 3000);
+        }
+
+        function closeFakeCall() {
+            clearTimeout(fakeCallTimeout);
+            clearInterval(fakeCallInterval);
+            document.getElementById('modal-fake-call').classList.add('hidden');
+            showToast('สิ้นสุดการโทร', 'info');
+        }
+
+        function toggleFakeMic() {
+            fakeMicMuted = !fakeMicMuted;
+            const btn = document.getElementById('btn-fake-mic');
+            if(fakeMicMuted) {
+                btn.classList.replace('bg-slate-700', 'bg-red-500');
+                btn.innerHTML = '<i class="fa-solid fa-microphone-slash"></i>';
+            } else {
+                btn.classList.replace('bg-red-500', 'bg-slate-700');
+                btn.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+            }
+        }
+
+        function toggleFakeCam() {
+            fakeCamOff = !fakeCamOff;
+            const btn = document.getElementById('btn-fake-cam');
+            const selfImg = document.getElementById('fake-call-self-avatar');
+            if(fakeCamOff) {
+                btn.classList.replace('bg-slate-700', 'bg-red-500');
+                btn.innerHTML = '<i class="fa-solid fa-video-slash"></i>';
+                selfImg.style.opacity = '0.1';
+            } else {
+                btn.classList.replace('bg-red-500', 'bg-slate-700');
+                btn.innerHTML = '<i class="fa-solid fa-video"></i>';
+                selfImg.style.opacity = '0.8';
+            }
+        }
+
+        function updateProgress(step) {
+            const perc = {1: '0%', 2: '33%', 3: '66%', 4: '100%'};
+            document.getElementById('progress-line').style.width = perc[step];
             for(let i=1; i<=4; i++) {
                 const dot = document.getElementById(`step-dot-${i}`);
-                if(!dot) continue;
-                if(i <= step) {
-                    dot.className = "w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm border-4 border-slate-900 transition-all duration-300";
-                } else {
-                    dot.className = "w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm border-4 border-slate-900 transition-all duration-300";
-                }
+                if(i <= step) dot.className = "w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm border-4 border-slate-900 transition-all duration-300";
+                else dot.className = "w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm border-4 border-slate-900 transition-all duration-300";
             }
         }
         function showRegStep(step) {
             for (let i = 1; i <= 4; i++) {
                 const el = document.getElementById('reg-step-' + i);
-                if (el) {
-                    if (i === step) el.classList.remove('hidden');
-                    else el.classList.add('hidden');
-                }
+                if (i === step) el.classList.remove('hidden'); else el.classList.add('hidden');
             }
             updateProgress(step);
         }
@@ -676,73 +696,122 @@
             const u = document.getElementById('reg-username').value.trim();
             const p = document.getElementById('reg-password').value;
             const c = document.getElementById('reg-age-check').checked;
-            if (!u || p.length < 6) return showToast('กรุณากรอก Username และ Password (ขั้นต่ำ 6 ตัวอักษร)', 'error');
+            if (!u || p.length < 6) return showToast('ข้อมูลไม่ถูกต้อง', 'error');
             if (!c) return showToast('กรุณายืนยันอายุ', 'error');
-            regData.username = u; regData.password = p;
-            showRegStep(2);
+            regData.username = u; regData.password = p; showRegStep(2);
         }
         function submitRegStep2() {
             const n = document.getElementById('reg-nickname').value.trim();
             if (!n) return showToast('กรุณาระบุชื่อเล่น', 'error');
-            regData.nickname = n;
-            showRegStep(3);
+            regData.nickname = n; showRegStep(3);
         }
         function prevRegStep(step) { showRegStep(step); }
         function skipRegStep3() { showRegStep(4); }
+        
+        function switchPlatformTab(plat) {
+            regData.gamePlatform = plat;
+            document.getElementById('input-mc').classList.toggle('hidden', plat !== 'minecraft');
+            document.getElementById('input-rb').classList.toggle('hidden', plat !== 'roblox');
+            
+            const tabMc = document.getElementById('tab-mc');
+            const tabRb = document.getElementById('tab-rb');
+            if(plat === 'minecraft') {
+                tabMc.className = "py-2.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white transition flex items-center justify-center gap-2";
+                tabRb.className = "py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center justify-center gap-2";
+                document.getElementById('game-avatar-preview').src = "https://minotar.net/helm/Steve/64.png";
+                document.getElementById('game-preview-status').textContent = "รอตรวจสอบ... (Minecraft)";
+            } else {
+                tabRb.className = "py-2.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white transition flex items-center justify-center gap-2";
+                tabMc.className = "py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center justify-center gap-2";
+                document.getElementById('game-avatar-preview').src = "https://api.dicebear.com/7.x/pixel-art/svg?seed=Roblox";
+                document.getElementById('game-preview-status').textContent = "เชื่อมต่อผ่านบัญชี (Roblox)";
+            }
+        }
+
+        function openRobloxOAuthModal() { document.getElementById('modal-roblox-oauth').classList.remove('hidden'); }
+        function closeRobloxOAuthModal() { document.getElementById('modal-roblox-oauth').classList.add('hidden'); }
+
+        async function authorizeRoblox() {
+            const inputVal = document.getElementById('oauth-rb-id').value.trim();
+            if (!inputVal) return showToast('กรุณาระบุชื่อ Roblox', 'error');
+            showToast('กำลังค้นหาข้อมูลจาก Roblox...', 'info');
+            closeRobloxOAuthModal();
+            
+            const img = document.getElementById('game-avatar-preview');
+            const status = document.getElementById('game-preview-status');
+            status.textContent = 'กำลังเชื่อมต่อ...'; status.className = "text-[10px] mt-2 font-medium text-center text-amber-400";
+            let rbxId = inputVal;
+            try {
+                if (isNaN(inputVal)) {
+                    const nameRes = await fetch(`https://api.roproxy.com/users/get-by-username?username=${inputVal}`);
+                    const nameData = await nameRes.json();
+                    if (nameData && nameData.Id) { rbxId = nameData.Id; } 
+                    else {
+                        const postRes = await fetch('https://users.roproxy.com/v1/usernames/users', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usernames: [inputVal], excludeBannedUsers: false })
+                        });
+                        const postData = await postRes.json();
+                        if(postData && postData.data && postData.data.length > 0) rbxId = postData.data[0].id;
+                        else throw new Error('ไม่พบชื่อ');
+                    }
+                }
+                const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${rbxId}&size=150x150&format=Png&isCircular=false`)}`;
+                const res = await fetch(proxyUrl);
+                const json = await res.json();
+                if(json && json.data && json.data.length > 0 && json.data[0].state === 'Completed') {
+                    img.src = json.data[0].imageUrl;
+                    status.textContent = 'เชื่อมต่อ Roblox สำเร็จ'; status.className = "text-[10px] mt-2 font-medium text-center text-emerald-400";
+                    document.getElementById('oauth-rb-id').value = inputVal; 
+                    showToast('ดึงภาพอวาตาร์ Roblox สำเร็จ!', 'success');
+                } else { throw new Error('Not found'); }
+            } catch(e) {
+                status.textContent = 'ไม่พบอวาตาร์'; status.className = "text-[10px] mt-2 font-medium text-center text-red-400";
+                img.src = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${inputVal}`;
+                document.getElementById('oauth-rb-id').value = inputVal;
+                showToast('ไม่พบผู้ใช้นี้', 'error');
+            }
+        }
+
+        function testFetchGameSkin() {
+            const name = document.getElementById('reg-mc-name').value.trim();
+            if (!name) return showToast('กรุณาใส่ชื่อ Minecraft', 'error');
+            const img = document.getElementById('game-avatar-preview');
+            const status = document.getElementById('game-preview-status');
+            img.src = `https://minotar.net/helm/${name}/64.png`;
+            img.onload = () => { status.textContent = 'พบสกิน Minecraft'; status.className = "text-[10px] mt-2 font-medium text-center text-emerald-400"; };
+            img.onerror = () => { status.textContent = 'ไม่พบผู้เล่นนี้'; status.className = "text-[10px] mt-2 font-medium text-center text-red-400"; img.src = 'https://minotar.net/helm/Steve/64.png'; };
+        }
+
         function submitRegStep3() {
-            const mcName = document.getElementById('reg-mc-name').value.trim();
-            regData.mcName = mcName;
-            if (mcName) {
-                const mcOpt = document.getElementById('avatar-mc');
-                const mcImg = document.getElementById('avatar-mc-img');
-                const mcLock = document.getElementById('avatar-mc-lock');
+            if(regData.gamePlatform === 'minecraft') regData.gameName = document.getElementById('reg-mc-name').value.trim();
+            else regData.gameName = document.getElementById('oauth-rb-id').value.trim();
+            
+            const gameAvatarUrl = document.getElementById('game-avatar-preview').src;
+            if (regData.gameName && gameAvatarUrl) {
+                const mcOpt = document.getElementById('avatar-game');
+                const mcImg = document.getElementById('avatar-game-img');
+                const mcLock = document.getElementById('avatar-game-lock');
                 mcOpt.classList.remove('opacity-40', 'cursor-not-allowed');
-                mcImg.src = `https://minotar.net/helm/${mcName}/64.png`;
-                mcImg.classList.remove('hidden');
-                mcLock.classList.add('hidden');
-                selectAvatar('avatar-mc', mcImg.src);
+                mcImg.src = gameAvatarUrl; mcImg.classList.remove('hidden'); mcLock.classList.add('hidden');
+                selectAvatar('avatar-game', gameAvatarUrl);
             }
             showRegStep(4);
         }
-        function testFetchMinecraftSkin() {
-            const name = document.getElementById('reg-mc-name').value.trim();
-            if (!name) return showToast('กรุณาใส่ชื่อ Minecraft', 'error');
-            const img = document.getElementById('mc-avatar-preview');
-            const loading = document.getElementById('mc-avatar-loading');
-            const status = document.getElementById('mc-preview-status');
-            
-            if(loading) loading.classList.remove('hidden');
-            img.src = `https://minotar.net/helm/${name}/64.png`;
-            img.onload = () => {
-                if(loading) loading.classList.add('hidden');
-                status.textContent = 'พบสกินผู้เล่น';
-                status.className = "text-xs text-emerald-400 mt-2 font-medium";
-            };
-            img.onerror = () => {
-                if(loading) loading.classList.add('hidden');
-                status.textContent = 'ไม่พบผู้เล่นนี้';
-                status.className = "text-xs text-red-400 mt-2 font-medium";
-                img.src = 'https://minotar.net/helm/Steve/64.png';
-            };
-        }
+
         function selectAvatar(id, url) {
             document.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected', 'border-indigo-500'));
             const target = document.getElementById(id);
-            if(target && !target.classList.contains('cursor-not-allowed')) {
-                target.classList.add('selected', 'border-indigo-500');
-                if(url) selectedAvatarUrl = url;
-            }
+            if(target && !target.classList.contains('cursor-not-allowed')) { target.classList.add('selected', 'border-indigo-500'); if(url) selectedAvatarUrl = url; }
         }
         function handleRegAvatarUpload(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = ev => {
+            if (e.target.files[0]) {
+                const r = new FileReader();
+                r.onload = ev => {
                     selectedAvatarUrl = ev.target.result;
-                    document.getElementById('reg-avatar-filename').textContent = file.name;
+                    document.getElementById('reg-avatar-filename').textContent = e.target.files[0].name;
                     document.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected'));
                 };
-                reader.readAsDataURL(file);
+                r.readAsDataURL(e.target.files[0]);
             }
         }
 
@@ -750,87 +819,44 @@
             try {
                 showToast('กำลังสมัครสมาชิก...', 'info');
                 if(!supabaseClient) throw new Error('ฐานข้อมูลออฟไลน์');
-
                 const email = regData.username + '@app.local';
-                const { data: authData, error: authErr } = await supabaseClient.auth.signUp({
-                    email: email, password: regData.password
-                });
-                
+                const { data: authData, error: authErr } = await supabaseClient.auth.signUp({ email: email, password: regData.password });
                 if (authErr) throw authErr;
                 const userId = authData.user ? authData.user.id : 'uuid-' + Date.now();
 
-                // บันทึกลงตาราง profiles ของฐานข้อมูลจริง
-                const profileData = {
-                    id: userId,
-                    username: regData.username,
-                    nickname: regData.nickname,
-                    mc_name: regData.mcName || '',
-                    avatar_url: selectedAvatarUrl
-                };
-                try {
-                    await supabaseClient.from('profiles').insert([profileData]);
-                } catch(e) {}
+                const profileData = { id: userId, username: regData.username, nickname: regData.nickname, mc_name: regData.gameName || '', avatar_url: selectedAvatarUrl };
+                try { await supabaseClient.from('profiles').insert([profileData]); } catch(e) {}
 
-                currentUser = {
-                    id: userId,
-                    username: regData.nickname,
-                    avatar: selectedAvatarUrl,
-                    isGuest: false
-                };
+                currentUser = { id: userId, username: regData.nickname, avatar: selectedAvatarUrl, isGuest: false };
                 localStorage.setItem('mc_chat_user', JSON.stringify(currentUser));
-                showToast('สมัครสมาชิกและเก็บโปรไฟล์แล้ว!', 'success');
+                showToast('สมัครสมาชิกเสร็จสมบูรณ์!', 'success');
                 initChatScreen();
-
-            } catch (err) {
-                showToast('มีข้อผิดพลาด: ' + err.message, 'error');
-            }
+            } catch (err) { showToast(err.message, 'error'); }
         }
 
-        // ----------------------------------------------------
-        // ล็อกอินบัญชีจริง & แขกผู้ใช้ (Guest)
-        // ----------------------------------------------------
         async function doLogin() {
             const u = document.getElementById('login-username').value.trim();
             const p = document.getElementById('login-password').value;
-            if (!u || !p) return showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+            if (!u || !p) return showToast('กรุณากรอกข้อมูล', 'error');
             try {
                 showToast('กำลังเข้าสู่ระบบ...', 'info');
-                if(!supabaseClient) throw new Error('ฐานข้อมูลออฟไลน์');
-
-                const { data, error } = await supabaseClient.auth.signInWithPassword({
-                    email: u + '@app.local', password: p
-                });
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email: u + '@app.local', password: p });
                 if (error) throw error;
-
-                let profileNickname = u;
-                let profileAvatar = 'https://api.dicebear.com/7.x/pixel-art/svg?seed=' + u;
+                let profileNickname = u, profileAvatar = 'https://api.dicebear.com/7.x/pixel-art/svg?seed=' + u;
                 try {
                     const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', data.user.id).single();
-                    if(profile) {
-                        profileNickname = profile.nickname || profileNickname;
-                        profileAvatar = profile.avatar_url || profileAvatar;
-                    }
+                    if(profile) { profileNickname = profile.nickname || profileNickname; profileAvatar = profile.avatar_url || profileAvatar; }
                 } catch(e) {}
-                
-                currentUser = {
-                    id: data.user.id,
-                    username: profileNickname,
-                    avatar: profileAvatar,
-                    isGuest: false
-                };
+                currentUser = { id: data.user.id, username: profileNickname, avatar: profileAvatar, isGuest: false };
                 localStorage.setItem('mc_chat_user', JSON.stringify(currentUser));
                 showToast('เข้าสู่ระบบสำเร็จ!', 'success');
                 initChatScreen();
-            } catch (err) {
-                showToast('ชื่อผู้ใช้หรือรหัสผ่านผิดพลาด', 'error');
-            }
+            } catch (err) { showToast('ข้อมูลไม่ถูกต้อง', 'error'); }
         }
 
         function loginAsGuest() {
             const r = Math.floor(100000 + Math.random() * 900000);
-            currentUser = {
-                id: 'guest-' + r, username: 'Guest' + r, avatar: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=' + r, isGuest: true
-            };
+            currentUser = { id: 'guest-' + r, username: 'Guest' + r, avatar: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=' + r, isGuest: true };
             localStorage.setItem('mc_chat_user', JSON.stringify(currentUser));
             showToast('เข้าสู่ระบบแบบ Guest', 'success');
             initChatScreen();
@@ -838,25 +864,15 @@
 
         function logout() {
             if(supabaseClient) supabaseClient.auth.signOut();
-            currentUser = null;
-            localStorage.removeItem('mc_chat_user');
-            switchView('auth-choice');
+            currentUser = null; localStorage.removeItem('mc_chat_user'); switchView('auth-choice');
         }
 
-        // ----------------------------------------------------
-        // แชทระบบ 
-        // ----------------------------------------------------
         function initChatScreen() {
             switchView('chat');
             document.getElementById('chat-my-name').textContent = currentUser.username;
             document.getElementById('chat-my-avatar').src = currentUser.avatar;
-            
-            const badge = document.getElementById('guest-badge');
-            if(currentUser.isGuest) badge.classList.remove('hidden');
-            else badge.classList.add('hidden');
-
-            fetchMessages();
-            subscribeToChat();
+            document.getElementById('guest-badge').classList.toggle('hidden', !currentUser.isGuest);
+            fetchMessages(); subscribeToChat();
         }
 
         function handleChatImageSelect(e) {
@@ -871,8 +887,7 @@
             }
         }
         function removeChatImage() {
-            chatImageBase64 = null;
-            document.getElementById('chat-image-upload').value = '';
+            chatImageBase64 = null; document.getElementById('chat-image-upload').value = '';
             document.getElementById('chat-image-preview-container').classList.add('hidden');
         }
         function handleEnter(e) { if(e.key === 'Enter') sendMessage(); }
@@ -880,95 +895,54 @@
         async function fetchMessages() {
             const box = document.getElementById('chat-messages');
             try {
-                if(!supabaseClient) throw new Error('Offline');
                 const { data, error } = await supabaseClient.from('messages').select('*').order('created_at', { ascending: true }).limit(50);
                 if (error) throw error;
-                
                 box.innerHTML = '';
                 if(data.length === 0) box.innerHTML = '<div class="text-slate-500 text-center text-sm my-4">ยังไม่มีข้อความ</div>';
                 else data.forEach(m => appendMessageUI(m));
-                
                 box.scrollTop = box.scrollHeight;
-            } catch (e) {
-                box.innerHTML = '<div class="text-red-400 text-center text-xs my-4">ไม่สามารถโหลดข้อความได้</div>';
-            }
+            } catch (e) { box.innerHTML = '<div class="text-red-400 text-center text-xs my-4">ไม่สามารถโหลดข้อความได้</div>'; }
         }
 
         async function sendMessage() {
             const input = document.getElementById('chat-input');
             const txt = input.value.trim();
             if (!txt && !chatImageBase64) return;
-            
             input.disabled = true;
             
-            // อ้างอิงตามคอลัมน์จริงในรูปของคุณ: sender_id, sender_name, message
-            const msgObj = {
-                sender_id: currentUser.id,
-                sender_name: currentUser.username,
-                avatar_url: currentUser.avatar,
-                message: txt,
-                image_url: chatImageBase64
-            };
-
+            const msgObj = { sender_id: currentUser.id, sender_name: currentUser.username, avatar_url: currentUser.avatar, message: txt, image_url: chatImageBase64 };
             let tempMsg = null;
             try {
-                if(!supabaseClient) throw new Error('Offline');
                 const { data, error } = await supabaseClient.from('messages').insert([msgObj]).select();
                 if (error) {
                     const { error: err2 } = await supabaseClient.from('messages').insert([msgObj]);
                     if(err2) throw err2;
                     tempMsg = { ...msgObj, id: 'temp-'+Date.now() };
-                } else if (data && data.length > 0) {
-                    tempMsg = data[0];
-                }
+                } else if (data && data.length > 0) tempMsg = data[0];
 
-                input.value = '';
-                removeChatImage();
-                if(tempMsg) {
-                    appendMessageUI(tempMsg);
-                    const box = document.getElementById('chat-messages');
-                    box.scrollTop = box.scrollHeight;
-                }
+                input.value = ''; removeChatImage();
+                if(tempMsg) { appendMessageUI(tempMsg); document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight; }
             } catch (e) { 
-                showToast('ส่งด่วนออฟไลน์', 'error');
-                tempMsg = { ...msgObj, id: 'local-'+Date.now() };
-                appendMessageUI(tempMsg);
+                tempMsg = { ...msgObj, id: 'local-'+Date.now() }; appendMessageUI(tempMsg);
                 document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
-                input.value = '';
-                removeChatImage();
-            } finally {
-                input.disabled = false;
-                input.focus();
-            }
+                input.value = ''; removeChatImage();
+            } finally { input.disabled = false; input.focus(); }
         }
 
         function subscribeToChat() {
             if(!supabaseClient) return;
             try {
                 supabaseClient.channel('messages')
-                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, p => {
-                        appendMessageUI(p.new);
-                        const box = document.getElementById('chat-messages');
-                        box.scrollTop = box.scrollHeight;
-                    })
-                    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, p => {
-                        const el = document.getElementById(`msg-${p.old.id}`);
-                        if(el) el.remove();
-                    })
-                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, p => {
-                        const el = document.getElementById(`msg-${p.new.id}`);
-                        if(el) {
-                            const tEl = el.querySelector('.msg-text-content');
-                            if(tEl) tEl.textContent = p.new.message + " (แก้ไขแล้ว)";
-                        }
-                    })
+                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, p => { appendMessageUI(p.new); document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight; })
+                    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, p => { const el = document.getElementById(`msg-${p.old.id}`); if(el) el.remove(); })
+                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, p => { const el = document.getElementById(`msg-${p.new.id}`); if(el) { const tEl = el.querySelector('.msg-text-content'); if(tEl) tEl.textContent = p.new.message + " (แก้ไขแล้ว)"; } })
                     .subscribe();
             } catch(e) {}
         }
 
         function appendMessageUI(msg) {
             if(document.getElementById(`msg-${msg.id}`)) return;
-            if(!msg.message && !msg.image_url) return; // บล็อกข้อความอากาศพังหน้าจอ
+            if(!msg.message && !msg.image_url) return; 
 
             const box = document.getElementById('chat-messages');
             if(box.innerHTML.includes('ยังไม่มีข้อความ') || box.innerHTML.includes('เกิดข้อผิดพลาด')) box.innerHTML = '';
@@ -977,19 +951,21 @@
             const alignClass = isMine ? 'items-end' : 'items-start';
             const bgClass = isMine ? 'bg-indigo-600 text-white rounded-tr-sm' : 'bg-slate-800 text-slate-200 rounded-tl-sm';
             
-            let imgHtml = msg.image_url ? `<img src="${msg.image_url}" class="rounded-lg mt-2 max-w-[200px] border border-white/10">` : '';
-            let txtHtml = msg.message ? `<div class="msg-text-content text-sm whitespace-pre-wrap">${escapeHtml(msg.message)}</div>` : '';
+            let imgHtml = msg.image_url ? `<img src="${msg.image_url}" data-imgurl="${msg.image_url}" onclick="openImageViewer('${msg.image_url}')" class="chat-photo rounded-lg mt-2 max-w-[200px] border border-white/10 cursor-pointer hover:opacity-80 transition shadow-sm">` : '';
+            let txtHtml = msg.message ? `<div class="msg-text-content text-sm whitespace-pre-wrap break-words">${escapeHtml(msg.message)}</div>` : '';
 
             const html = `
-                <div id="msg-${msg.id}" class="flex flex-col ${alignClass} max-w-[85%] ${isMine ? 'self-end' : 'self-start'} prevent-select"
-                     oncontextmenu="handleContext(event, '${msg.id}', ${isMine})"
-                     ontouchstart="handleTouchStart(event, '${msg.id}', ${isMine})"
+                <div id="msg-${msg.id}" class="chat-msg-row flex flex-col ${alignClass} w-full max-w-[85%] ${isMine ? 'self-end' : 'self-start'} prevent-select"
+                     data-msgid="${msg.id}"
+                     data-imgurl="${msg.image_url || ''}"
+                     oncontextmenu="handleContext(event)"
+                     ontouchstart="handleTouchStart(event)"
                      ontouchend="handleTouchEnd()">
-                    
                     ${!isMine ? `<span class="text-[10px] text-slate-400 mb-1 ml-1">${escapeHtml(msg.sender_name || 'User')}</span>` : ''}
-                    
-                    <div class="flex gap-2 ${isMine ? 'flex-row-reverse' : ''}">
-                        <img src="${msg.avatar_url || 'https://api.dicebear.com/7.x/pixel-art/svg?seed=fallback'}" class="w-8 h-8 rounded-lg shrink-0 bg-slate-800">
+                    <div class="flex gap-2 ${isMine ? 'flex-row-reverse' : ''} max-w-full">
+                        <img src="${msg.avatar_url || 'https://api.dicebear.com/7.x/pixel-art/svg?seed=fallback'}" 
+                             onclick="openUserProfile('${msg.sender_id}', '${escapeHtml(msg.sender_name)}', '${msg.avatar_url}')"
+                             class="w-8 h-8 rounded-lg shrink-0 bg-slate-800 cursor-pointer hover:scale-110 active:scale-95 transition object-cover">
                         <div class="px-4 py-2 rounded-2xl ${bgClass} shadow-md relative overflow-hidden break-words">
                             ${txtHtml}${imgHtml}
                         </div>
@@ -999,39 +975,80 @@
             box.insertAdjacentHTML('beforeend', html);
         }
 
-        function escapeHtml(unsafe) {
-            if(!unsafe) return '';
-            return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        function escapeHtml(unsafe) { if(!unsafe) return ''; return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
+
+        // --- ระบบคลิกขวา & แตะค้างอัจฉริยะ (Context Menu) ---
+        function handleContext(e) {
+            e.preventDefault();
+            // ค้นหากล่องข้อความหลักที่ถูกคลิก
+            const row = e.currentTarget;
+            const msgId = row.dataset.msgid;
+            const imgUrl = row.dataset.imgurl;
+            const isMine = row.classList.contains('self-end'); // เช็คว่าเป็นข้อความของเราหรือไม่
+
+            setupContextMenuUI(e.pageX, e.pageY, msgId, imgUrl, isMine);
         }
 
-        // --- Context Menu (แก้ไข/ลบ) ---
-        function handleContext(e, id, isMine) {
-            e.preventDefault();
-            if(!isMine) return;
-            selectedMessageId = id;
-            const menu = document.getElementById('context-menu');
-            const maxX = window.innerWidth - 150;
-            const maxY = window.innerHeight - 100;
-            menu.style.left = Math.min(e.pageX, maxX) + 'px';
-            menu.style.top = Math.min(e.pageY, maxY) + 'px';
-            menu.classList.remove('hidden');
-        }
-        function handleTouchStart(e, id, isMine) {
-            if(!isMine) return;
+        function handleTouchStart(e) {
+            const row = e.currentTarget;
+            const msgId = row.dataset.msgid;
+            const imgUrl = row.dataset.imgurl;
+            const isMine = row.classList.contains('self-end');
+            
             const touch = e.touches[0];
             pressTimer = setTimeout(() => {
-                selectedMessageId = id;
-                const menu = document.getElementById('context-menu');
-                menu.style.left = Math.min(touch.pageX, window.innerWidth - 150) + 'px';
-                menu.style.top = Math.min(touch.pageY, window.innerHeight - 100) + 'px';
-                menu.classList.remove('hidden');
-            }, 600);
+                setupContextMenuUI(touch.pageX, touch.pageY, msgId, imgUrl, isMine);
+            }, 600); // 600ms บนมือถือ
         }
-        function handleTouchEnd() { if(pressTimer) clearTimeout(pressTimer); }
+
+        function handleTouchEnd() {
+            if(pressTimer) clearTimeout(pressTimer);
+        }
+
+        // จัดการหน้าตาปุ่มในคลิกขวา/กดค้าง
+        function setupContextMenuUI(x, y, msgId, imgUrl, isMine) {
+            selectedMessageId = msgId;
+            selectedMessageImageUrl = imgUrl || null;
+
+            const menu = document.getElementById('context-menu');
+            const btnEdit = document.getElementById('menu-btn-edit');
+            const btnDelete = document.getElementById('menu-btn-delete');
+            const btnDownload = document.getElementById('menu-btn-download');
+
+            // 1. ควบคุมปุ่ม "ดาวน์โหลดรูป" (แสดงผลถ้าข้อความนั้นมีรูปภาพ ไม่ว่าจะเป็นของใครก็ตาม)
+            if (imgUrl && imgUrl.trim() !== '') {
+                btnDownload.classList.remove('hidden');
+                btnDownload.style.display = 'flex';
+            } else {
+                btnDownload.classList.add('hidden');
+                btnDownload.style.display = 'none';
+            }
+
+            // 2. ควบคุมปุ่ม "แก้ไข" และ "ลบ" (แสดงผลเฉพาะเมื่อเป็นข้อความของเราเองเท่านั้น)
+            if (isMine) {
+                btnEdit.classList.remove('hidden');
+                btnEdit.style.display = 'flex';
+                btnDelete.classList.remove('hidden');
+                btnDelete.style.display = 'flex';
+            } else {
+                btnEdit.classList.add('hidden');
+                btnEdit.style.display = 'none';
+                btnDelete.classList.add('hidden');
+                btnDelete.style.display = 'none';
+            }
+
+            // จัดตำแหน่งไม่ให้ล้นจอ
+            const maxX = window.innerWidth - 160;
+            const maxY = window.innerHeight - 150;
+            menu.style.left = Math.min(x, maxX) + 'px';
+            menu.style.top = Math.min(y, maxY) + 'px';
+            
+            menu.classList.remove('hidden');
+        }
 
         document.addEventListener('click', (e) => {
             const menu = document.getElementById('context-menu');
-            if(menu && !menu.classList.contains('hidden') && !menu.contains(e.target)) {
+            if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target)) {
                 menu.classList.add('hidden');
             }
         });
@@ -1040,17 +1057,11 @@
             const txt = prompt("แก้ไขข้อความ:");
             if(txt !== null && txt.trim() !== "") {
                 try {
-                    if(!supabaseClient) throw new Error("Offline");
-                    const { error } = await supabaseClient.from('messages').update({ message: txt }).eq('id', selectedMessageId);
-                    if(error) throw error;
-                    
-                    const el = document.getElementById(`msg-${selectedMessageId}`);
-                    if(el) {
-                        const tEl = el.querySelector('.msg-text-content');
-                        if(tEl) tEl.textContent = txt + " (แก้ไขแล้ว)";
-                    }
-                    showToast('แก้ไขข้อความแล้ว', 'success');
-                } catch(e) { showToast('แก้ไขไม่สำเร็จ', 'error'); }
+                    await supabaseClient.from('messages').update({ message: txt }).eq('id', selectedMessageId);
+                    const el = document.getElementById(`msg-${selectedMessageId}`); 
+                    if(el) el.querySelector('.msg-text-content').textContent = txt + " (แก้ไขแล้ว)";
+                    showToast('แก้ไขข้อความสำเร็จ', 'success');
+                } catch(e) {}
                 document.getElementById('context-menu').classList.add('hidden');
             }
         }
@@ -1058,17 +1069,16 @@
         async function deleteMessage() {
             if(confirm("ลบข้อความออกจากระบบ?")) {
                 try {
-                    if(!supabaseClient) throw new Error("Offline");
-                    const { error } = await supabaseClient.from('messages').delete().eq('id', selectedMessageId);
-                    if(error) throw error;
-                    
-                    const el = document.getElementById(`msg-${selectedMessageId}`);
+                    await supabaseClient.from('messages').delete().eq('id', selectedMessageId);
+                    const el = document.getElementById(`msg-${selectedMessageId}`); 
                     if(el) el.remove();
-                    showToast('ลบข้อความแล้ว', 'success');
-                } catch(e) { showToast('ลบไม่สำเร็จ', 'error'); }
+                    showToast('ลบข้อความสำเร็จ', 'success');
+                } catch(e) {}
                 document.getElementById('context-menu').classList.add('hidden');
             }
         }
     </script>
 </body>
 </html>
+
+
