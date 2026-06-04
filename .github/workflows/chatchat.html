@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft CoCommunitymmunity Chat & Auth</title>
+    <title>Community Chat & Auth</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
@@ -17,92 +18,226 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        /* ต้นฉบับของคุณ 100% */
-        body {
-            font-family: 'Kanit', sans-serif;
-            background: radial-gradient(circle at center, #1e1b4b 0%, #020617 100%);
+        body { font-family: 'Kanit', sans-serif; background: radial-gradient(circle at center, #1e1b4b 0%, #020617 100%); }
+        .image-render-pixelated { image-rendering: pixelated; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .avatar-option.selected { border-color: #6366f1; background-color: rgba(99, 102, 241, 0.2); transform: scale(1.05); }
+        .prevent-select { user-select: none; -webkit-user-select: none; }
+        
+        /* Animation สำหรับหน้าจอ Fake Call */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            100% { transform: scale(1.5); opacity: 0; }
         }
-        .image-render-pixelated {
-            image-rendering: pixelated;
-        }
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        .avatar-option.selected {
-            border-color: #6366f1;
-            background-color: rgba(99, 102, 241, 0.2);
-            transform: scale(1.05);
-        }
-        /* ป้องกันการคลุมดำข้อความเวลาแตะค้างบนมือถือ */
-        .prevent-select {
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            -khtml-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
+        .animate-pulse-ring {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
         }
     </style>
 </head>
 <body class="min-h-screen text-slate-100 flex items-center justify-center p-4 md:p-6 overflow-x-hidden relative">
 
-    <!-- ================= MAIN CONTAINER ================= -->
-    <div class="w-full max-w-5xl flex flex-col items-center justify-center relative">
+    <div class="w-full max-w-5xl flex flex-col items-center justify-center relative z-10">
         
-        <!-- แถบแจ้งเตือนลอย (Custom Notification Popup) -->
+        <!-- Toast -->
         <div id="toast" class="fixed top-5 right-5 z-[9999] transform translate-y-[-150%] transition-transform duration-300 ease-out bg-slate-900 border-l-4 border-indigo-500 py-3 px-5 rounded-r-xl shadow-2xl flex items-center gap-3">
             <span id="toast-icon" class="text-indigo-400 text-lg"><i class="fa-solid fa-bell"></i></span>
             <span id="toast-msg" class="text-sm font-medium text-white">ข้อความแจ้งเตือน</span>
         </div>
 
-        <!-- ================= START/WELCOME VIEW ================= -->
-        <div id="view-auth-choice" class="w-full max-w-md bg-slate-900/60 backdrop-blur-lg border border-slate-800 p-8 rounded-3xl shadow-2xl transition-all duration-300 text-center space-y-8 relative block">
+        <!-- ================= WELCOME VIEW ================= -->
+        <div id="view-auth-choice" class="w-full max-w-md bg-slate-900/60 backdrop-blur-lg border border-slate-800 p-8 rounded-3xl shadow-2xl text-center space-y-8 relative block">
             <div class="space-y-3">
                 <div class="w-20 h-20 bg-indigo-600/10 border border-indigo-500/30 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/10">
                     <i class="fa-solid fa-cubes text-4xl text-indigo-500"></i>
                 </div>
                 <h1 class="text-3xl font-bold text-white mb-2">ยินดีต้อนรับ</h1>
-                <p class="text-slate-400">ระบบเชื่อมต่อบัญชี Minecraft และแชทคอมมูนิตี้ที่ทำงานผ่าน Supabase Authentication</p>
+                <p class="text-slate-400 text-sm">ระบบเชื่อมต่อบัญชีเกม Minecraft/Roblox และแชทคอมมูนิตี้ผ่าน Supabase</p>
             </div>
             
-            <div class="space-y-4 relative z-20">
-                <button type="button" onclick="switchView('register')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-4 px-6 rounded-2xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer relative z-20">
+            <div class="space-y-4">
+                <button onclick="switchView('register')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-4 px-6 rounded-2xl transition flex items-center justify-center gap-2">
                     <i class="fa-solid fa-user-plus"></i> สมัครใช้งาน (Sign Up)
                 </button>
-                <button type="button" onclick="switchView('login')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-4 px-6 rounded-2xl transition border border-slate-700 flex items-center justify-center gap-2 cursor-pointer relative z-20">
+                <button onclick="switchView('login')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-4 px-6 rounded-2xl transition border border-slate-700 flex items-center justify-center gap-2">
                     <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ (Log In)
                 </button>
                 
                 <div class="relative flex py-2 items-center">
                     <div class="flex-grow border-t border-slate-800"></div>
-                    <span class="flex-shrink mx-4 text-xs text-slate-500 uppercase tracking-wider">หรือเข้าใช้งานด่วน</span>
+                    <span class="flex-shrink mx-4 text-xs text-slate-500 uppercase">หรือเข้าใช้งานด่วน</span>
                     <div class="flex-grow border-t border-slate-800"></div>
                 </div>
                 
-                <!-- ปุ่มเข้าระบบ Guest -->
-                <button type="button" onclick="loginAsGuest()" class="w-full bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 font-medium py-4 px-6 rounded-2xl transition flex items-center justify-center gap-2 cursor-pointer relative z-20">
+                <button onclick="loginAsGuest()" class="w-full bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 font-medium py-4 px-6 rounded-2xl transition flex items-center justify-center gap-2">
                     <i class="fa-solid fa-user-secret"></i> เข้าใช้งานในฐานะ Guest
                 </button>
                 
-                <!-- ปุ่มกู้คืนบัญชีด้วย UUID -->
-                <button type="button" onclick="openRecoveryModal()" class="w-full bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/30 font-medium py-3 px-6 rounded-2xl transition flex items-center justify-center gap-2 cursor-pointer relative z-20 text-sm mt-2">
+                <button onclick="openRecoveryModal()" class="w-full bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/30 font-medium py-3 px-6 rounded-2xl transition flex items-center justify-center gap-2 text-sm mt-2">
                     <i class="fa-solid fa-key"></i> กู้คืนบัญชีด้วย UUID
                 </button>
             </div>
         </div>
 
         <!-- ================= LOGIN VIEW ================= -->
-        <div id="view-login" class="hidden w-full max-w-md bg-slate-900/60 backdrop-blur-lg border border-slate-800 p-8 rounded-3xl shadow-2xl transition-all duration-300 text-center space-y-6 relative">
+        <div id="view-login" class="hidden w-full max-w-md bg-slate-900/60 backdrop-blur-lg border border-slate-800 p-8 rounded-3xl shadow-2xl text-center space-y-6 relative">
             <div>
                 <h2 class="text-2xl font-bold text-white mb-1">เข้าสู่ระบบ</h2>
                 <p class="text-sm text-slate-400">กรอกข้อมูลบัญชีของคุณ</p>
             </div>
             <div class="space-y-4 text-left">
                 <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Username</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                        <input type="text" id="login-username" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Password</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                        <input type="password" id="login-password" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition">
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-3 pt-4">
+                <button onclick="switchView('auth-choice')" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3.5 rounded-2xl transition">ย้อนกลับ</button>
+                <button onclick="doLogin()" class="w-2/3 bg-indigo-600 hover:bg-indigo-500 text-white py-3.5 rounded-2xl transition">เข้าสู่ระบบ</button>
+            </div>
+        </div>
+
+        <!-- ================= REGISTER FLOW ================= -->
+        <div id="view-register" class="hidden w-full max-w-lg bg-slate-900/60 backdrop-blur-lg border border-slate-800 p-6 md:p-8 rounded-3xl shadow-2xl relative">
+            <div class="mb-8">
+                <div class="flex items-center justify-between relative">
+                    <div class="absolute left-0 right-0 top-1/2 h-0.5 bg-slate-800 -z-10"></div>
+                    <div id="progress-line" class="absolute left-0 top-1/2 h-0.5 bg-indigo-500 transition-all duration-300 -z-10" style="width: 0%"></div>
+                    <div class="step-indicator flex flex-col items-center"><div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm border-4 border-slate-900" id="step-dot-1">1</div><span class="text-[10px] mt-1 text-indigo-400">บัญชี</span></div>
+                    <div class="step-indicator flex flex-col items-center"><div class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm border-4 border-slate-900" id="step-dot-2">2</div><span class="text-[10px] mt-1 text-slate-500">ข้อมูล</span></div>
+                    <div class="step-indicator flex flex-col items-center"><div class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm border-4 border-slate-900" id="step-dot-3">3</div><span class="text-[10px] mt-1 text-slate-500">ผูกเกม</span></div>
+                    <div class="step-indicator flex flex-col items-center"><div class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm border-4 border-slate-900" id="step-dot-4">4</div><span class="text-[10px] mt-1 text-slate-500">โปรไฟล์</span></div>
+                </div>
+            </div>
+
+            <!-- STEP 1 -->
+            <div id="reg-step-1" class="space-y-6 block">
+                <h2 class="text-2xl font-bold text-white mb-1">สร้างบัญชีผู้ใช้</h2>
+                <div class="space-y-4">
+                    <div class="relative"><i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i><input type="text" id="reg-username" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:border-indigo-500" placeholder="Username (ชื่อผู้ใช้)"></div>
+                    <div class="relative"><i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i><input type="password" id="reg-password" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:border-indigo-500" placeholder="Password (รหัสผ่าน ขั้นต่ำ 6 ตัว)"></div>
+                    <div class="flex items-start gap-3 p-4 bg-slate-950/30 rounded-2xl border border-slate-800">
+                        <input type="checkbox" id="reg-age-check" class="mt-1 w-5 h-5 rounded border-slate-800 bg-slate-950 text-indigo-600">
+                        <label class="text-sm text-slate-300">ฉันมีอายุ 13 ปีขึ้นไป</label>
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button onclick="switchView('auth-choice')" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-white py-3.5 rounded-2xl transition">ย้อนกลับ</button>
+                    <button onclick="submitRegStep1()" class="w-2/3 bg-indigo-600 hover:bg-indigo-500 text-white py-3.5 rounded-2xl transition">ถัดไป</button>
+                </div>
+            </div>
+
+            <!-- STEP 2 -->
+            <div id="reg-step-2" class="hidden space-y-6">
+                <h2 class="text-2xl font-bold text-white mb-1">ข้อมูลส่วนตัว</h2>
+                <div class="relative"><i class="fa-solid fa-signature absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i><input type="text" id="reg-nickname" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:border-indigo-500" placeholder="ชื่อเล่น เช่น Fold475"></div>
+                <div class="flex gap-3 pt-4">
+                    <button onclick="prevRegStep(1)" class="w-1/3 bg-slate-800 text-white py-3.5 rounded-2xl">ย้อนกลับ</button>
+                    <button onclick="submitRegStep2()" class="w-2/3 bg-indigo-600 text-white py-3.5 rounded-2xl">ถัดไป</button>
+                </div>
+            </div>
+
+            <!-- STEP 3: CROSS-PLATFORM -->
+            <div id="reg-step-3" class="hidden space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-white mb-1">เชื่อมต่อบัญชีเกม</h2>
+                    <p class="text-sm text-slate-400">เลือกดึงอวาตาร์จากเกมที่คุณชื่นชอบ</p>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2 bg-slate-950/80 p-1 rounded-2xl border border-slate-800">
+                    <button onclick="switchPlatformTab('minecraft')" id="tab-mc" class="py-2.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-cube"></i> Minecraft
+                    </button>
+                    <button onclick="switchPlatformTab('roblox')" id="tab-rb" class="py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-gamepad"></i> Roblox
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                    <div class="md:col-span-2 space-y-4">
+                        <div id="input-mc">
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Minecraft Java Username</label>
+                            <div class="relative mb-4">
+                                <i class="fa-solid fa-cube absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                <input type="text" id="reg-mc-name" class="w-full bg-slate-950/60 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:border-indigo-500" placeholder="ชื่อผู้เล่น">
+                            </div>
+                            <button onclick="testFetchGameSkin()" class="w-full bg-slate-800 hover:bg-slate-700 text-xs py-3 rounded-xl border border-slate-700 text-indigo-300 font-medium transition flex items-center justify-center gap-2"><i class="fa-solid fa-rotate"></i> ดึงภาพจาก Minecraft</button>
+                        </div>
+                        <div id="input-rb" class="hidden">
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Roblox Authorization</label>
+                            <p class="text-xs text-slate-500 mb-4">เชื่อมต่อผ่านแพลตฟอร์มของ Roblox เพื่อยืนยันตัวตน</p>
+                            <button onclick="openRobloxOAuthModal()" class="w-full bg-white hover:bg-slate-200 text-slate-900 font-bold py-3.5 px-4 rounded-2xl transition flex items-center justify-center gap-3 shadow-lg">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Roblox_player_icon_black.svg" class="w-5 h-5">
+                                Connect with Roblox
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col items-center justify-center p-4 bg-slate-950/50 border border-slate-800 rounded-2xl aspect-square">
+                        <span class="text-xs text-slate-500 mb-2">ตัวอย่าง</span>
+                        <div class="relative w-16 h-16 bg-slate-900 border-2 border-indigo-500 rounded-xl overflow-hidden flex items-center justify-center shadow-lg">
+                            <img id="game-avatar-preview" src="https://minotar.net/helm/Steve/64.png" class="w-12 h-12 image-render-pixelated object-cover transition-opacity duration-300">
+                        </div>
+                        <span id="game-preview-status" class="text-[10px] text-slate-500 mt-2 font-medium text-center">รอเชื่อมต่อ...</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button onclick="prevRegStep(2)" class="w-1/4 bg-slate-800 text-white py-3.5 rounded-2xl text-sm">ย้อนกลับ</button>
+                    <button onclick="skipRegStep3()" class="w-1/4 bg-slate-800/40 border border-slate-800 text-slate-400 py-3.5 rounded-2xl text-sm">ข้าม</button>
+                    <button onclick="submitRegStep3()" class="w-2/4 bg-indigo-600 text-white py-3.5 rounded-2xl text-sm">ถัดไป</button>
+                </div>
+            </div>
+
+            <!-- STEP 4 -->
+            <div id="reg-step-4" class="hidden space-y-6">
+                <div><h2 class="text-2xl font-bold text-white mb-1">เลือกรูปโปรไฟล์ของคุณ</h2></div>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-4 gap-3">
+                        <div onclick="selectAvatar('avatar-1', 'https://api.dicebear.com/7.x/pixel-art/svg?seed=John')" id="avatar-1" class="avatar-option selected cursor-pointer p-1.5 rounded-2xl border-2 border-slate-800 bg-slate-950/50"><img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=John" class="w-12 h-12 rounded-xl mx-auto"></div>
+                        <div onclick="selectAvatar('avatar-2', 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Sara')" id="avatar-2" class="avatar-option cursor-pointer p-1.5 rounded-2xl border-2 border-slate-800 bg-slate-950/50"><img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=Sara" class="w-12 h-12 rounded-xl mx-auto"></div>
+                        <div onclick="selectAvatar('avatar-3', 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Steve')" id="avatar-3" class="avatar-option cursor-pointer p-1.5 rounded-2xl border-2 border-slate-800 bg-slate-950/50"><img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=Steve" class="w-12 h-12 rounded-xl mx-auto"></div>
+                        <div onclick="selectAvatar('avatar-game', null)" id="avatar-game" class="avatar-option opacity-40 cursor-not-allowed p-1.5 rounded-2xl border-2 border-dashed border-slate-800 bg-slate-950/50 flex flex-col items-center justify-center relative">
+                            <img id="avatar-game-img" src="" class="w-12 h-12 rounded-xl hidden object-cover">
+                            <div id="avatar-game-lock" class="text-center"><i class="fa-solid fa-lock text-sm text-slate-500"></i><div class="text-[9px] text-slate-500 mt-1">เกมอวาตาร์</div></div>
+                        </div>
+                    </div>
+                    <div class="mt-4 p-3 bg-slate-900/50 border border-slate-800 rounded-2xl flex items-center gap-3">
+                        <input type="file" id="reg-avatar-file" accept="image/*" class="hidden" onchange="handleRegAvatarUpload(event)">
+                        <button onclick="document.getElementById('reg-avatar-file').click()" class="bg-indigo-600/20 text-indigo-400 text-xs py-2 px-4 rounded-xl border border-indigo-500/30">อัปโหลดรูป</button>
+                        <span id="reg-avatar-filename" class="text-xs text-slate-500 truncate w-32">ยังไม่ได้เลือกไฟล์</span>
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button onclick="prevRegStep(3)" class="w-1/3 bg-slate-800 text-white py-3.5 rounded-2xl">ย้อนกลับ</button>
+                    <button onclick="finishRegistration()" class="w-2/3 bg-indigo-600 text-white py-3.5 rounded-2xl">เสร็จสิ้น</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= CHAT VIEW ================= -->
+        <div id="view-chat" class="hidden w-full max-w-4xl h-[85vh] bg-slate-900/60 backdrop-blur-lg border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="bg-slate-950/50 p-4 flex justify-between border-b border-slate-800 items-center">
+                <div class="flex gap-3 items-center">
+                    <img id="chat-my-avatar" src="" onclick="openSecurityModal()" class="w-10 h-10 rounded-xl border border-indigo-500 bg-slate-800 cursor-pointer hover:scale-105 transition shrink-0" title="ตั้งค่าความปลอดภัย">
+                    <div>
+                        <div class="text-white font-bold flex items-center gap-2"><span id="chat-my-name">Name</span><span id="guest-badge" class="hidden text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">GUEST</span></div>
+                        <div class="text-[10px] text-emerald-400"><span class="w-2 h-2 bg-emerald-400 rounded-full inline-block animate-pulse"></span> เชื่อมต่อฐานข้อมูลสำเร็จ</div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-1 md:gap-2">
+                    <button onclick="startFakeGroupCall()" class="text-slate-400 hover:t                <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Username - ชื่อผู้ใช้</label>
                     <div class="relative">
                         <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
